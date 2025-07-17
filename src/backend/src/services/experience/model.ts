@@ -52,6 +52,7 @@ export const getExperience = async (id: string) => {
 export const updateExperience = async (id: string, data: Partial<ExperienceUpdateInput>) => {
   const { startDate, endDate, description, ...rest } = data;
   
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const updateData: any = { ...rest };
   
   if (startDate !== undefined) {
