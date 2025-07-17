@@ -1,4 +1,4 @@
-export interface Experience {
+export type Experience = {
   id: string
   company: string
   position: string
@@ -9,7 +9,7 @@ export interface Experience {
   updatedAt: Date
 }
 
-export interface ExperienceInput {
+export type ExperienceInput = {
   company: string
   position: string
   startDate: string // Required, YYYY-MM format
@@ -17,4 +17,4 @@ export interface ExperienceInput {
   description: string[]
 }
 
-export interface ExperienceUpdateInput extends Partial<ExperienceInput> {}
+export type ExperienceUpdateInput = {} & Partial<ExperienceInput>
