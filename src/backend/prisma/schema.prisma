@@ -1,0 +1,67 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model CV {
+  id        String   @id @default(uuid()) @db.Uuid
+  filename  String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Experience {
+  id          String   @id @default(uuid()) @db.Uuid
+  company     String
+  position    String
+  startDate   Int
+  endDate     Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  description String[]
+}
+
+model Project {
+  id             String   @id @default(uuid()) @db.Uuid
+  year           String
+  platform       String
+  tag            String
+  project_name   String
+  description    String
+  link_appstore  String?
+  link_playstore String?
+  link_website   String?
+  display        String
+  bucket         String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([bucket, project_name])
+}
+
+model ProjectImage {
+  id          String   @id @default(uuid()) @db.Uuid
+  bucket      String
+  filename    String
+  isFeatured  Boolean  @default(false)
+  isThumbnail Boolean  @default(false)
+  order       Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([bucket, filename])
+  @@index([bucket])
+}
+
+model User {
+  id        String   @id @default(uuid()) @db.Uuid
+  email     String   @unique
+  password  String
+  role      String   @default("user")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
