@@ -1,6 +1,6 @@
 export type Platform = 'mobile' | 'website';
 
-export interface ProjectInput {
+export type ProjectInput = {
   year: string;
   platform: Platform;
   tag: string;
@@ -13,20 +13,4 @@ export interface ProjectInput {
   bucket: string;
 }
 
-export interface ProjectUpdateInput extends Partial<ProjectInput> {}
-
-export interface Project {
-  id: string;
-  year: string;
-  platform: Platform;
-  tag: string;
-  project_name: string;
-  description: string[];
-  link_appstore?: string | null;
-  link_playstore?: string | null;
-  link_website?: string | null;
-  display: string;
-  bucket: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
+export type ProjectUpdateInput = {} & Partial<ProjectInput> 
