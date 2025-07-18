@@ -20,47 +20,6 @@ import {
 export const experienceController = new Elysia({ prefix: "/experience" })
   // Create new experience
 
-  // Get all experiences (sorted by endDate)
-  .get("/", async () => {
-    try {
-      const data = await getExperiences();
-      const formattedExperiences = data.map(
-        (exp: {
-          startDate: string | null;
-          endDate: string | null;
-          description: string[];
-          startDateReadable: string;
-          endDateReadable: string;
-          id: string;
-          company: string;
-          position: string;
-          createdAt: Date;
-          updatedAt: Date;
-        }) => ({
-          ...exp,
-          description: exp.description,
-          // typeof exp.description === "string" && exp.description
-          //   ? JSON.parse(exp.description)
-          //   : [],
-        })
-      );
-      return successResponse(formattedExperiences, "Get exp successfully", 200);
-      // set.status = 200;
-      // return {
-      //   status: 200,
-      //   message: "Get experiences successfully",
-      //   data: formattedExperiences,
-      // };
-    } catch (error) {
-      return errorResponse(error, "Failed to get experiences", 500);
-      // set.status = 500;
-      // return {
-      //   status: 500,
-      //   message: "Failed to get experiences",
-      //   error: error instanceof Error ? error.message : String(error),
-      // };
-    }
-  })
   .use(jwt(jwtProps))
   .use(bearer())
   .guard(authSwagger(true), (app) =>
@@ -243,4 +202,45 @@ export const experienceController = new Elysia({ prefix: "/experience" })
           }),
         }
       )
-  );
+  )
+  // Get all experiences (sorted by endDate)
+  .get("/", async () => {
+    try {
+      const data = await getExperiences();
+      const formattedExperiences = data.map(
+        (exp: {
+          startDate: string | null;
+          endDate: string | null;
+          description: string[];
+          startDateReadable: string;
+          endDateReadable: string;
+          id: string;
+          company: string;
+          position: string;
+          createdAt: Date;
+          updatedAt: Date;
+        }) => ({
+          ...exp,
+          description: exp.description,
+          // typeof exp.description === "string" && exp.description
+          //   ? JSON.parse(exp.description)
+          //   : [],
+        })
+      );
+      return successResponse(formattedExperiences, "Get exp successfully", 200);
+      // set.status = 200;
+      // return {
+      //   status: 200,
+      //   message: "Get experiences successfully",
+      //   data: formattedExperiences,
+      // };
+    } catch (error) {
+      return errorResponse(error, "Failed to get experiences", 500);
+      // set.status = 500;
+      // return {
+      //   status: 500,
+      //   message: "Failed to get experiences",
+      //   error: error instanceof Error ? error.message : String(error),
+      // };
+    }
+  });

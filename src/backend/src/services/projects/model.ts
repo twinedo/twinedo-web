@@ -1,4 +1,3 @@
-import type { Project } from "../../../../shared";
 import { prisma } from "../../../prisma/client";
 import type { Platform, ProjectInput, ProjectUpdateInput } from "./types";
 import { parseDescription } from "./utils";
