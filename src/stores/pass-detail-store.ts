@@ -4,11 +4,28 @@ import { persist } from "zustand/middleware";
 import { createPersistStorage } from "./storage";
 
 interface PassDataState {
-  data: Project | null;
+  data: Project;
 }
 
 interface PassDataAction {
-  setData: (data: Project | null) => void;
+  setData: (data: Project) => void;
+}
+
+export const initialPassDataState: Project = {
+	bucket: '',
+	description: [''],
+	display: '',
+	id: '',
+	key: '',
+	link_appstore: '',
+	link_playstore: '',
+	link_website: '',
+	project_name: '',
+	platform: 'mobile',
+	tag: '',
+	year: '',
+	createdAt: '',
+	updatedAt: '',
 }
 
 const storage = createPersistStorage<PassDataState>();
@@ -16,8 +33,8 @@ const storage = createPersistStorage<PassDataState>();
 const usePassDetailStore = create<PassDataState & PassDataAction>()(
   persist(
     (set) => ({
-      data: null,
-      setData: (data: Project | null) => set({ data }),
+      data: initialPassDataState,
+      setData: (data: Project) => set({ data }),
     }),
     {
       name: "pass-detail-twin-web-storage",

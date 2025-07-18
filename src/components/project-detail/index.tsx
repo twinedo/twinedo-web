@@ -7,7 +7,7 @@ import { FaGooglePlay } from "react-icons/fa";
 import { Section } from "../section";
 import type { Project } from "@/shared";
 import { useRouter } from "next/navigation";
-import usePassDetailStore from "@/stores/pass-detail-store";
+import usePassDetailStore, { initialPassDataState } from "@/stores/pass-detail-store";
 import Link from 'next/link'
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
@@ -69,7 +69,7 @@ export function ProjectDetail({
   };
 
   const onBack = () => {
-    setData(null)
+    setData(initialPassDataState)
     router.back()
   }
 

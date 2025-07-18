@@ -1,7 +1,7 @@
 
 import { prisma } from '../../../prisma/client';
 import type { Platform, ProjectInput, ProjectUpdateInput } from './types';
-import { parseDescription } from './utils.ts';
+import { parseDescription } from './utils';
 
 export const createProject = async (data: ProjectInput) => {
   return await prisma.project.create({
@@ -34,14 +34,19 @@ export const getProject = async (id: string) => {
 
 export const updateProject = async (id: string, data: ProjectUpdateInput) => {
   const updateData = { ...data };
-  
+
   if (data.description !== undefined) {
     updateData.description = JSON.stringify(parseDescription(data.description));
   }
 
+  // Ensure description is string or undefined
+  if (Array.isArray(updateData.description)) {
+    updateData.description = JSON.stringify(updateData.description);
+  }
+
   return await prisma.project.update({
     where: { id },
-    data: updateData
+    data: updateData as Omit<typeof updateData, 'description'> & { description?: string }
   });
 };
 

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Elysia } from "elysia";
 import { cors } from "@elysiajs/cors";
 import { swagger } from "@elysiajs/swagger";
@@ -42,11 +43,11 @@ const app = new Elysia({ prefix: "/api" })
 // console.log(
 //   `🦊 Backend running at http://${app.server}:${app.server?.port}`
 // );
-export const GET = app.handle;
-export const POST = app.handle;
-export const PATCH = app.handle;
-export const DELETE = app.handle;
-export const PUT = app.handle;
+export const GET = app.handle as any;
+export const POST = app.handle as any;
+export const PATCH = app.handle as any;
+export const DELETE = app.handle as any;
+export const PUT = app.handle as any;
 
 export default app;
 export type App = typeof app;
