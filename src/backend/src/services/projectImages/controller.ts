@@ -29,10 +29,22 @@ export const projectImageController = new Elysia({ prefix: "/project-images" })
     async ({ params: { bucket }, set }) => {
       try {
         const images = await getProjectImages(bucket);
-        const data = images.map((img) => ({
-          ...img,
-          url: `/project/files/${bucket}/${img.filename}`,
-        }));
+        const data = images.map(
+          (img: {
+            bucket: string;
+            id: string;
+            filename: string;
+            isFeatured: boolean;
+            isThumbnail: boolean;
+            order: number;
+            createdAt: Date;
+            updatedAt: Date;
+            url?: string;
+          }) => ({
+            ...img,
+            url: `/project/files/${bucket}/${img.filename}`,
+          })
+        );
 
         set.status = 200;
         return {
@@ -156,7 +168,11 @@ export const projectImageController = new Elysia({ prefix: "/project-images" })
             }
 
             // Delete file from filesystem
-            const filePath = join(PROJECTS_UPLOAD_DIR, image.bucket, image.filename);
+            const filePath = join(
+              PROJECTS_UPLOAD_DIR,
+              image.bucket,
+              image.filename
+            );
             await unlink(filePath).catch(() => {});
 
             // Delete database record
@@ -182,5 +198,5 @@ export const projectImageController = new Elysia({ prefix: "/project-images" })
           }),
         }
       )
-  )
-  // Upload new image (using bucket)
+  );
+// Upload new image (using bucket)
