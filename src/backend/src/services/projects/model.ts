@@ -1,35 +1,60 @@
-
-import { prisma } from '../../../prisma/client';
-import type { Platform, ProjectInput, ProjectUpdateInput } from './types';
-import { parseDescription } from './utils';
+import type { Project } from "../../../../shared";
+import { prisma } from "../../../prisma/client";
+import type { Platform, ProjectInput, ProjectUpdateInput } from "./types";
+import { parseDescription } from "./utils";
 
 export const createProject = async (data: ProjectInput) => {
   return await prisma.project.create({
     data: {
       ...data,
-      description: JSON.stringify(parseDescription(data.description))
-    }
+      description: JSON.stringify(parseDescription(data.description)),
+    },
   });
 };
 
 export const getProjects = async (filter?: { platform?: Platform }) => {
   const projects = await prisma.project.findMany({
     where: filter,
-    orderBy: { year: 'desc' }
+    orderBy: { year: "desc" },
   });
-  
-  return projects.map(proj => ({
-    ...proj,
-    description: JSON.parse(proj.description)
-  }));
+
+  return projects.map(
+    (proj: {
+      id: string;
+      year: string;
+      platform: string;
+      tag: string;
+      project_name: string;
+      description: string;
+      link_appstore: string | null;
+      link_playstore: string | null;
+      link_website: string | null;
+      display: string;
+      bucket: string;
+      createdAt: Date;
+      updatedAt: Date;
+    }) => {
+      return {
+        ...proj,
+        description: Array.isArray(proj.description)
+          ? proj.description
+          : [proj.description],
+        link_appstore: proj.link_appstore || "", // Fallback to empty string
+        link_playstore: proj.link_playstore || "",
+        link_website: proj.link_website || "",
+      };
+    }
+  );
 };
 
 export const getProject = async (id: string) => {
   const project = await prisma.project.findUnique({ where: { id } });
-  return project ? {
-    ...project,
-    description: JSON.parse(project.description)
-  } : null;
+  return project
+    ? {
+        ...project,
+        description: JSON.parse(project.description),
+      }
+    : null;
 };
 
 export const updateProject = async (id: string, data: ProjectUpdateInput) => {
@@ -46,7 +71,9 @@ export const updateProject = async (id: string, data: ProjectUpdateInput) => {
 
   return await prisma.project.update({
     where: { id },
-    data: updateData as Omit<typeof updateData, 'description'> & { description?: string }
+    data: updateData as Omit<typeof updateData, "description"> & {
+      description?: string;
+    },
   });
 };
 

@@ -1,6 +1,6 @@
 export type Project = {
 	bucket: string;
-	description: string[];
+	description: string[] | string;
 	display: string;
 	id: string;
 	key?: string;
@@ -24,5 +24,5 @@ export type ProjectImage = {
   order: number;
   createdAt: string;
   updatedAt: string;
-  url: string;
+  url?: string;
 }
