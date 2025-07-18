@@ -25,14 +25,23 @@ export const getExperiences = async () => {
     ]
   });
 
-  return experiences.map(exp => ({
+  return experiences.map((exp: {
+    id: string;
+    company: string;
+    position: string;
+    startDate: number | null;
+    endDate: number | null;
+    createdAt: Date;
+    updatedAt: Date;
+    description: string[];
+  }) => ({
     ...exp,
-    startDate: epochToYyyyMm(exp.startDate),
-    endDate: exp.endDate ? epochToYyyyMm(exp.endDate) : null,
+    startDate: exp.startDate != null ? epochToYyyyMm(exp.startDate) : null,
+    endDate: exp.endDate != null ? epochToYyyyMm(exp.endDate) : null,
     description: exp.description,
     // Add readable format for display
-    startDateReadable: epochToReadable(exp.startDate),
-    endDateReadable: exp.endDate ? epochToReadable(exp.endDate) : 'Present',
+    startDateReadable: exp.startDate != null ? epochToReadable(exp.startDate) : '',
+    endDateReadable: exp.endDate != null ? epochToReadable(exp.endDate) : 'Present',
   }));
 };
 
