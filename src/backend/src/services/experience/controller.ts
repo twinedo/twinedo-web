@@ -11,7 +11,7 @@ import jwt from "@elysiajs/jwt";
 import { jwtProps } from "../../utils/const";
 import bearer from "@elysiajs/bearer";
 import { isValidYyyyMm } from "../../utils/dateUtils";
-import { errorResponse, successResponse, type ExperienceUpdateInput } from '../../../../shared'
+import { errorResponse, successResponse, type Experience, type ExperienceUpdateInput } from '../../../../shared'
 
 export const experienceController = new Elysia({ prefix: "/experience" })
   // Create new experience
@@ -20,7 +20,7 @@ export const experienceController = new Elysia({ prefix: "/experience" })
   .get("/", async () => {
     try {
       const data = await getExperiences();
-      const formattedExperiences = data.map((exp) => ({
+      const formattedExperiences = data.map((exp: Experience) => ({
         ...exp,
         description: exp.description
           // typeof exp.description === "string" && exp.description
