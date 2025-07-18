@@ -1,6 +1,6 @@
 {
   "buildCommand": "bun --bun run build",
-  "installCommand": "bun install && cd src/backend && bun run db:generate && cd .. && cd ..",
+  "installCommand": "bun install && cd src/backend && bun install && bun run db:generate && cd .. && cd ..",
   "framework": "nextjs",
   "functions": {
     "src/app/api/[[...slugs]]/route.ts": {
