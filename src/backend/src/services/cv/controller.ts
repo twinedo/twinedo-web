@@ -13,6 +13,9 @@ import getConfig from "next/config";
 
 const { CV_UPLOAD_DIR } = getConfig().serverRuntimeConfig;
 
+export const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 
+  `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`;
+
 // Ensure upload directory exists - wrapped in async function
 const ensureUploadDir = async () => {
   await mkdir(CV_UPLOAD_DIR, { recursive: true });
@@ -37,7 +40,7 @@ export const cvController = new Elysia({ prefix: "/cv" })
 
     if (!cv) {
       set.headers = {
-        "Access-Control-Allow-Origin": import.meta.env.VITE_FRONTEND_URL || "*",
+        "Access-Control-Allow-Origin": baseUrl || "*",
         "Access-Control-Allow-Methods": "GET",
       };
       return errorResponse("No CV found", "", 404);
@@ -49,7 +52,7 @@ export const cvController = new Elysia({ prefix: "/cv" })
     set.headers = {
       "Content-Type": "application/pdf",
       "Content-Disposition": `attachment; filename="${cv.filename}"`,
-      "Access-Control-Allow-Origin": import.meta.env.VITE_FRONTEND_URL || "*",
+      "Access-Control-Allow-Origin": baseUrl || "*",
       "Access-Control-Expose-Headers": "Content-Disposition",
     };
 

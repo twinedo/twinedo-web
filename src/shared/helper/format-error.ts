@@ -5,7 +5,7 @@ export function formatError(error: unknown): {
   if (error instanceof Error) {
     return { 
       message: error.message,
-      details: import.meta.env.NODE_ENV === 'development' ? error.stack : undefined 
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined 
     };
   }
   return { 
