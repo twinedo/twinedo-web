@@ -21,7 +21,6 @@ export function ProjectDetail({
 }) {
   const router = useRouter()
   const setData = usePassDetailStore(state => state.setData)
-  // console.log('imageData', imageData)
 
   const imageSettings = {
     dots: true,

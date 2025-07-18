@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import usePassDetailStore from "@/stores/pass-detail-store";
 import { useGetProjects } from "@/services/projects";
 import { Section } from "../section";
-import { useProjects } from "@/hooks/useProjects";
 import useSelectedTabStore from "@/stores/selected-tab-store";
 import { Skeleton } from "../ui/skeleton";
 
@@ -20,9 +19,6 @@ export function Projects() {
     useGetProjects("website");
 
   const setData = usePassDetailStore((state) => state.setData);
-
-  console.log("mobileData", mobileData);
-  console.log("websiteData", websiteData);
 
   const onNavigate = (data: Project) => {
     setData(data);
