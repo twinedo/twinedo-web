@@ -1,5 +1,5 @@
 {
-  "buildCommand": "bun run db:generate && bun --bun run build",
+  "buildCommand": "bun --bun run build",
   "installCommand": "bun install",
   "framework": "nextjs",
   "functions": {
