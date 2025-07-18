@@ -1,0 +1,10 @@
+{
+  "buildCommand": "bun --bun run build",
+  "installCommand": "bun install",
+  "framework": "nextjs",
+  "functions": {
+    "src/app/api/[[...slugs]]/route.ts": {
+      "maxDuration": 30
+    }
+  }
+}

@@ -9,7 +9,7 @@ import { authController } from "./src/services/auth";
 
 const app = new Elysia({ prefix: "/api" })
   .use(cors())
-  .get("/", () => "Hello from Elysia!")
+  .get("/", () => ("Hello from Elysia!"))
   .use(cvController)
   .use(experienceController)
   .use(projectController)
@@ -42,5 +42,11 @@ const app = new Elysia({ prefix: "/api" })
 // console.log(
 //   `🦊 Backend running at http://${app.server}:${app.server?.port}`
 // );
+export const GET = app.handle;
+export const POST = app.handle;
+export const PATCH = app.handle;
+export const DELETE = app.handle;
+export const PUT = app.handle;
 
 export default app;
+export type App = typeof app;
