@@ -24,5 +24,5 @@ export type ProjectImage = {
   order: number;
   createdAt: string;
   updatedAt: string;
-  url?: string;
+  blobUrl: string;
 }

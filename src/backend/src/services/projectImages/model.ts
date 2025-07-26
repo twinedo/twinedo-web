@@ -1,12 +1,12 @@
 import { prisma } from "../../../prisma/client";
 
-
-export const createProjectImage = async (data: { bucket: string; filename: string }) => {
+export const createProjectImage = async (data: { bucket: string; filename: string, blobUrl: string }) => {
   return await prisma.projectImage.create({
     data: {
       ...data,
       order: 0,
-      isFeatured: false
+      isFeatured: false,
+      blobUrl: data.blobUrl,
     }
   })
 }
@@ -14,7 +14,8 @@ export const createProjectImage = async (data: { bucket: string; filename: strin
 export const getProjectImages = async (bucket: string) => {
   return await prisma.projectImage.findMany({
     where: { bucket },
-    orderBy: [{ isFeatured: 'desc' }, { order: 'asc' }]
+    orderBy: [{ isFeatured: 'desc' }, { order: 'asc' }],
+    select: { id: true, blobUrl: true }
   })
 }
 

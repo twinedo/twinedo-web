@@ -14,6 +14,7 @@ import jwt from "@elysiajs/jwt";
 import { jwtProps } from "../../utils/const";
 import bearer from "@elysiajs/bearer";
 import getConfig from "next/config";
+import { put } from '@vercel/blob';
 const { PROJECTS_UPLOAD_DIR } = getConfig().serverRuntimeConfig;
 
 export const projectImageController = new Elysia({ prefix: "/project-images" })
@@ -23,7 +24,7 @@ export const projectImageController = new Elysia({ prefix: "/project-images" })
       prefix: "/project/files",
     })
   )
-  // Get all images for a bucket
+  // Get all images for a bucket (PUBLIC ENDPOINT - NO AUTH REQUIRED)
   .get(
     "/:bucket",
     async ({ params: { bucket }, set }) => {
@@ -40,9 +41,9 @@ export const projectImageController = new Elysia({ prefix: "/project-images" })
             createdAt: Date;
             updatedAt: Date;
             url?: string;
+            blobUrl?: string | null;
           }) => ({
-            ...img,
-            url: `/project/files/${bucket}/${img.filename}`,
+            ...img
           })
         );
 
@@ -67,6 +68,7 @@ export const projectImageController = new Elysia({ prefix: "/project-images" })
       }),
     }
   )
+  // PROTECTED ENDPOINTS BELOW - REQUIRE AUTHENTICATION
   .use(jwt(jwtProps))
   .use(bearer())
   .guard(authSwagger(true, ["Project Images"]), (app) =>
@@ -89,12 +91,16 @@ export const projectImageController = new Elysia({ prefix: "/project-images" })
             const ext = file.name.substring(file.name.lastIndexOf("."));
             const filename = `img-${Date.now()}${ext}`;
             const filePath = join(bucketDir, filename);
+            const pathname = `${bucket}/${filename}`;
 
             // Save file
-            await Bun.write(filePath, file);
+            // await Bun.write(filePath, file);
+            const blob = await put(pathname, file, {
+              access: 'public',
+            });
 
             // Create database record
-            const data = await createProjectImage({ bucket, filename });
+            const data = await createProjectImage({ bucket, filename, blobUrl: blob.url });
 
             set.status = 201;
             return {
@@ -102,7 +108,9 @@ export const projectImageController = new Elysia({ prefix: "/project-images" })
               message: "Image uploaded successfully",
               data: {
                 ...data,
-                url: `/project/files/${bucket}/${filename}`,
+                // url: `/project/files/${bucket}/${filename}`,
+                // url: Bun.file(filePath),
+                url: blob.url,
               },
             };
           } catch (error) {
@@ -199,4 +207,3 @@ export const projectImageController = new Elysia({ prefix: "/project-images" })
         }
       )
   );
-// Upload new image (using bucket)

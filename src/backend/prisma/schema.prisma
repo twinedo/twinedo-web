@@ -1,7 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
   previewFeatures = ["postgresqlExtensions"]
-
 }
 
 datasource db {
@@ -54,6 +53,7 @@ model ProjectImage {
   order       Int
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  blobUrl     String
 
   @@unique([bucket, filename])
   @@index([bucket])
