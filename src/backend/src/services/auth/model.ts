@@ -1,5 +1,6 @@
 // import jwt from "jsonwebtoken";
 import { prisma } from "../../../prisma/client";
+import bcrypt from "bcrypt";
 
 // const JWT_SECRET = process.env.JWT_SECRET || "portfolio-twinedo-jwt";
 
@@ -8,7 +9,7 @@ export const registerUser = async (data: {
   password: string;
   role?: "superadmin" | "user";
 }) => {
-  const hashedPassword = await Bun.password.hash(data.password, "bcrypt");
+  const hashedPassword = await bcrypt.hash(data.password, 10);
   return await prisma.user.create({
     data: {
       email: data.email,
@@ -22,7 +23,7 @@ export const loginUser = async (email: string, password: string) => {
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user) throw new Error("User not found");
 
-  const valid = await Bun.password.verify(password, user.password);
+  const valid = await bcrypt.compare(password, user.password);
   if (!valid) throw new Error("Invalid password");
 
   return {
