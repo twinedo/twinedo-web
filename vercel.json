@@ -1,13 +1,19 @@
 {
   "buildCommand": "bun --bun run build",
-  "installCommand": "bun install && cd src/backend && bun install && bun run db:generate && cd .. && cd ..",
+  "env": {
+    "SKIP_ENV_VALIDATION": "true"
+  },
   "framework": "nextjs",
   "functions": {
     "src/app/api/[[...slugs]]/route.ts": {
       "maxDuration": 30
     }
   },
-  "env": {
-    "SKIP_ENV_VALIDATION": "true"
-  }
+  "installCommand": "bun install && cd src/backend && bun install && bun run db:generate && cd .. && cd ..",
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "/api"
+    }
+  ]
 }
