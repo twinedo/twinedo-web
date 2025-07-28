@@ -9,11 +9,5 @@
       "maxDuration": 30
     }
   },
-  "installCommand": "bun install && cd src/backend && bun install && bun run db:generate && cd .. && cd ..",
-  "rewrites": [
-    {
-      "source": "/api/:path*",
-      "destination": "/api"
-    }
-  ]
+  "installCommand": "bun install && cd src/backend && bun install && bun run db:generate && cd .. && cd .."
 }
