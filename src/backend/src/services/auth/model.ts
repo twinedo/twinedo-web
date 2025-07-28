@@ -1,6 +1,6 @@
 // import jwt from "jsonwebtoken";
 import { prisma } from "../../../prisma/client";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 
 // const JWT_SECRET = process.env.JWT_SECRET || "portfolio-twinedo-jwt";
 
@@ -37,33 +37,4 @@ export const loginUser = async (email: string, password: string) => {
 
 // export const verifyToken = (token: string) => {
 //   if (!token) {
-//     throw new Error("No token provided");
-//   }
-
-//   try {
-//     const decoded = jwt.verify(token, JWT_SECRET) as {
-//       id: string;
-//       email: string;
-//       role: string;
-//       exp: number;
-//     };
-
-//     // Check token expiration
-//     if (decoded.exp && Date.now() >= decoded.exp * 1000) {
-//       throw new Error("Token expired");
-//     }
-
-//     return decoded;
-//   } catch (error) {
-//     throw new Error("Invalid token");
-//   }
-// };
-
-export const deleteUser = async (id: string) => {
-  const response = await prisma.user.delete({
-    where: {
-      id: id,
-    },
-  });
-  return response;
-};
+//     throw new Error("No token provided
