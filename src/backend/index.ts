@@ -7,8 +7,15 @@ import { experienceController } from "./src/services/experience";
 import { projectController } from "./src/services/projects";
 import { projectImageController } from "./src/services/projectImages";
 import { authController } from "./src/services/auth";
+import { prisma } from "./prisma/client";
 
 const app = new Elysia({ prefix: "/api" })
+  .get('/health', () => ({ ok: true }))
+  .get('/health/db', async () => {
+    // minimal DB check
+    await prisma.$queryRaw`SELECT 1`
+    return { db: 'ok' }
+  })
   .use(cors())
   .get("/", () => ("Hello from Elysia!"))
   .use(cvController)
