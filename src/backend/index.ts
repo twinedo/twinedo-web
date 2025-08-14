@@ -45,7 +45,10 @@ const app = new Elysia({ prefix: "/api" })
         // Remove the global security: [{ bearerAuth: [] }] here
       },
     })
-  );
+  ).onError(({ code, error, request }) => {
+    console.error('[ElysiaError]', code, request.method, request.url, error);
+    return new Response('Internal error', { status: 500 });
+  });
 
 // console.log(
 //   `🦊 Backend running at http://${app.server}:${app.server?.port}`
