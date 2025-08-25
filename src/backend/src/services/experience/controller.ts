@@ -7,6 +7,34 @@ import {
 
 // Public experience controller - completely isolated
 export const experienceController = new Elysia({ prefix: "/experience" })
+  // Simple test endpoint first
+  .get("/test", async ({ set }) => {
+    try {
+      console.log('[Experience] Test endpoint called');
+      set.status = 200;
+      return { message: "Experience test endpoint working", timestamp: new Date().toISOString() };
+    } catch (error) {
+      console.error('[Experience] Error in test endpoint:', error);
+      set.status = 500;
+      return { error: "Test endpoint failed" };
+    }
+  })
+  // Minimal endpoint without database call
+  .get("/minimal", async ({ set }) => {
+    try {
+      console.log('[Experience] Minimal endpoint called');
+      set.status = 200;
+      return {
+        status: 200,
+        message: "Minimal experience endpoint working",
+        data: []
+      };
+    } catch (error) {
+      console.error('[Experience] Error in minimal endpoint:', error);
+      set.status = 500;
+      return { error: "Minimal endpoint failed" };
+    }
+  })
   // Public endpoint - NO AUTHENTICATION
   .get("/", async ({ set }) => {
     try {
