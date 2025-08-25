@@ -1,15 +1,15 @@
 import { Elysia, t } from "elysia";
 import { createOrUpdateCV, getCV } from "./model";
 import { staticPlugin } from "@elysiajs/static";
-import { mkdir } from "node:fs/promises";
+import { mkdir, readFile, writeFile, access } from "node:fs/promises";
 import { join } from "node:path";
-import { unlink } from "node:fs/promises";
+import { unlink, constants } from "node:fs/promises";
 import { authSwagger } from "../../utils/fun";
 import jwt from "@elysiajs/jwt";
 import { jwtProps } from "../../utils/const";
 import bearer from "@elysiajs/bearer";
-import { errorResponse } from "../../../../shared";
 import getConfig from "next/config";
+import { errorResponse } from "../../../../shared";
 
 const { CV_UPLOAD_DIR } = getConfig().serverRuntimeConfig;
 
@@ -24,13 +24,20 @@ const ensureUploadDir = async () => {
 // Call the function to ensure directory exists
 ensureUploadDir().catch(console.error);
 
-export const cvController = new Elysia({ prefix: "/cv" })
-  .use(
+// Create base controller
+const baseCvController = new Elysia({ prefix: "/cv" });
+
+// Only use static plugin in development or when not on Vercel
+if (process.env.NODE_ENV === 'development' && !process.env.VERCEL && CV_UPLOAD_DIR) {
+  baseCvController.use(
     staticPlugin({
       assets: CV_UPLOAD_DIR,
       prefix: "/cv/files",
     })
-  )
+  );
+}
+
+export const cvController = baseCvController
   .get("/", async () => {
     const cv = await getCV();
     return { cv };
@@ -57,7 +64,8 @@ export const cvController = new Elysia({ prefix: "/cv" })
     };
 
     // Return the file
-    return new Response(Bun.file(filePath));
+    const fileBuffer = await readFile(filePath);
+    return new Response(fileBuffer);
   })
   .use(jwt(jwtProps))
   .use(bearer())
@@ -81,13 +89,15 @@ export const cvController = new Elysia({ prefix: "/cv" })
 
         // Delete existing file if it exists
         try {
-          (await Bun.file(filePath).exists()) && (await unlink(filePath));
+          await access(filePath, constants.F_OK);
+          await unlink(filePath);
         } catch (error) {
           console.log("No existing file to delete");
         }
 
         // Save new file
-        await Bun.write(filePath, file);
+        const arrayBuffer = await file.arrayBuffer();
+        await writeFile(filePath, Buffer.from(arrayBuffer));
         const cv = await createOrUpdateCV(filename);
 
         return {

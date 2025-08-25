@@ -17,13 +17,20 @@ import getConfig from "next/config";
 import { put } from '@vercel/blob';
 const { PROJECTS_UPLOAD_DIR } = getConfig().serverRuntimeConfig;
 
-export const projectImageController = new Elysia({ prefix: "/project-images" })
-  .use(
+// Create base controller
+const baseProjectImageController = new Elysia({ prefix: "/project-images" });
+
+// Only use static plugin in development or when not on Vercel
+if (process.env.NODE_ENV === 'development' && !process.env.VERCEL && PROJECTS_UPLOAD_DIR) {
+  baseProjectImageController.use(
     staticPlugin({
       assets: PROJECTS_UPLOAD_DIR,
       prefix: "/project/files",
     })
-  )
+  );
+}
+
+export const projectImageController = baseProjectImageController
   // Get all images for a bucket (PUBLIC ENDPOINT - NO AUTH REQUIRED)
   .get(
     "/:bucket",
@@ -93,8 +100,7 @@ export const projectImageController = new Elysia({ prefix: "/project-images" })
             const filePath = join(bucketDir, filename);
             const pathname = `${bucket}/${filename}`;
 
-            // Save file
-            // await Bun.write(filePath, file);
+            // Save file to Vercel Blob
             const blob = await put(pathname, file, {
               access: 'public',
             });
@@ -108,8 +114,6 @@ export const projectImageController = new Elysia({ prefix: "/project-images" })
               message: "Image uploaded successfully",
               data: {
                 ...data,
-                // url: `/project/files/${bucket}/${filename}`,
-                // url: Bun.file(filePath),
                 url: blob.url,
               },
             };

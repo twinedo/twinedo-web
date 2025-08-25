@@ -3,15 +3,14 @@
     // Node.js environment setup
     "lib": ["ES2022"],
     "target": "ES2022",
-    "module": "CommonJS",
+    "module": "ESNext",
     "moduleDetection": "auto",
     "allowJs": true,
     "baseUrl": ".",
     "outDir": "./dist",
-    "rootDir": "./",
 
     // Node.js module resolution
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
@@ -32,6 +31,6 @@
     "declaration": true,
     "sourceMap": true
   },
-  "include": ["**/*"],
+  "include": ["**/*", "../shared/**/*"],
   "exclude": ["node_modules", "dist"]
 }
