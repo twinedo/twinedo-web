@@ -1,5 +1,5 @@
 {
-  "buildCommand": "bun --bun run build",
+  "buildCommand": "npm run build",
   "env": {
     "SKIP_ENV_VALIDATION": "true"
   },
@@ -9,5 +9,5 @@
       "maxDuration": 30
     }
   },
-  "installCommand": "bun install && cd src/backend && bun install && bun run db:generate && cd .. && cd .."
+  "installCommand": "npm install && cd src/backend && npm install && npm run db:generate && cd .. && cd .."
 }
