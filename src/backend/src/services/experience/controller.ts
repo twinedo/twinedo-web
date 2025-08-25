@@ -18,7 +18,7 @@ import {
 } from "../../../../shared";
 
 export const experienceController = new Elysia({ prefix: "/experience" })
-  // Get all experiences (sorted by endDate)
+  // Public endpoint - Get all experiences (sorted by endDate)
   .get("/", async () => {
     try {
       const data = await getExperiences();
@@ -59,8 +59,7 @@ export const experienceController = new Elysia({ prefix: "/experience" })
       // };
     }
   })
-  // Create new experience
-
+  // Protected endpoints - require authentication
   .use(jwt(jwtProps))
   .use(bearer())
   .guard(authSwagger(true), (app) =>
