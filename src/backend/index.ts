@@ -24,34 +24,42 @@ const app = new Elysia({ prefix: "/api" })
   }))
   .use(cors())
   .get("/", () => ("Hello from Elysia!"))
-  .use(cvController)
-  .use(experienceController)
-  .use(projectController)
-  .use(projectImageController)
-  .use(authController)
-  .use(
-    swagger({
-      documentation: {
-        info: {
-          title: "Portfolio API",
-          version: "1.0.0",
-        },
-        tags: [
-          { name: "Project Images", description: "Image management endpoints" },
-        ],
-        components: {
-          securitySchemes: {
-            bearerAuth: {
-              type: "http",
-              scheme: "bearer",
-              bearerFormat: "JWT",
-            },
-          },
-        },
-        // Remove the global security: [{ bearerAuth: [] }] here
-      },
-    })
-  ).onError(({ code, error, request }) => {
+  .get("/direct-test", ({ set }) => {
+    console.log('[DirectTest] Direct test route called');
+    set.status = 200;
+    return { message: "Direct test working", timestamp: new Date().toISOString() };
+  })
+  .use(experienceController)  // Only test experience controller
+  // Temporarily comment out other controllers to isolate issue
+  // .use(cvController)
+  // .use(projectController)
+  // .use(projectImageController)
+  // .use(authController)
+  // Temporarily comment out swagger to test JWT issues
+  // .use(
+  //   swagger({
+  //     documentation: {
+  //       info: {
+  //         title: "Portfolio API",
+  //         version: "1.0.0",
+  //       },
+  //       tags: [
+  //         { name: "Project Images", description: "Image management endpoints" },
+  //       ],
+  //       components: {
+  //         securitySchemes: {
+  //           bearerAuth: {
+  //             type: "http",
+  //             scheme: "bearer",
+  //             bearerFormat: "JWT",
+  //           },
+  //         },
+  //       },
+  //       // Remove the global security: [{ bearerAuth: [] }] here
+  //     },
+  //   })
+  // )
+  .onError(({ code, error, request }) => {
     console.error('[ElysiaError]', {
       code,
       method: request.method,
