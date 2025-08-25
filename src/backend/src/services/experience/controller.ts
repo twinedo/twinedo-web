@@ -19,8 +19,9 @@ import {
 
 export const experienceController = new Elysia({ prefix: "/experience" })
   // Public endpoint - Get all experiences (sorted by endDate)
-  .get("/", async () => {
+  .get("/", async ({ set }) => {
     try {
+      console.log('[Experience] GET / called - no auth required');
       const data = await getExperiences();
       const formattedExperiences = data.map(
         (exp: {
@@ -42,21 +43,13 @@ export const experienceController = new Elysia({ prefix: "/experience" })
           //   : [],
         })
       );
+      console.log('[Experience] Returning', formattedExperiences.length, 'experiences');
+      set.status = 200;
       return successResponse(formattedExperiences, "Get exp successfully", 200);
-      // set.status = 200;
-      // return {
-      //   status: 200,
-      //   message: "Get experiences successfully",
-      //   data: formattedExperiences,
-      // };
     } catch (error) {
+      console.error('[Experience] Error in GET /', error);
+      set.status = 500;
       return errorResponse(error, "Failed to get experiences", 500);
-      // set.status = 500;
-      // return {
-      //   status: 500,
-      //   message: "Failed to get experiences",
-      //   error: error instanceof Error ? error.message : String(error),
-      // };
     }
   })
   // Protected endpoints - require authentication

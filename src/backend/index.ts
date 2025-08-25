@@ -16,6 +16,12 @@ const app = new Elysia({ prefix: "/api" })
     await prisma.$queryRaw`SELECT 1`
     return { db: 'ok' }
   })
+  .get('/debug/env', () => ({
+    hasJwtSecret: !!process.env.JWT_SECRET,
+    hasPublicJwtSecret: !!process.env.NEXT_PUBLIC_JWT_SECRET,
+    hasDatabaseUrl: !!process.env.DATABASE_URL,
+    nodeEnv: process.env.NODE_ENV
+  }))
   .use(cors())
   .get("/", () => ("Hello from Elysia!"))
   .use(cvController)
@@ -46,7 +52,13 @@ const app = new Elysia({ prefix: "/api" })
       },
     })
   ).onError(({ code, error, request }) => {
-    console.error('[ElysiaError]', code, request.method, request.url, error);
+    console.error('[ElysiaError]', {
+      code,
+      method: request.method,
+      url: request.url,
+      error: error instanceof Error ? error.message : String(error),
+      stack: process.env.NODE_ENV === 'development' && error instanceof Error ? error.stack : undefined
+    });
     return new Response('Internal error', { status: 500 });
   });
 
