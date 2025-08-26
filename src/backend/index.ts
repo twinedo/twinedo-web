@@ -29,36 +29,34 @@ const app = new Elysia({ prefix: "/api" })
     set.status = 200;
     return { message: "Direct test working", timestamp: new Date().toISOString() };
   })
-  .use(experienceController)  // Only test experience controller
-  // Temporarily comment out other controllers to isolate issue
-  // .use(cvController)
-  // .use(projectController)
-  // .use(projectImageController)
-  // .use(authController)
-  // Temporarily comment out swagger to test JWT issues
-  // .use(
-  //   swagger({
-  //     documentation: {
-  //       info: {
-  //         title: "Portfolio API",
-  //         version: "1.0.0",
-  //       },
-  //       tags: [
-  //         { name: "Project Images", description: "Image management endpoints" },
-  //       ],
-  //       components: {
-  //         securitySchemes: {
-  //           bearerAuth: {
-  //             type: "http",
-  //             scheme: "bearer",
-  //             bearerFormat: "JWT",
-  //           },
-  //         },
-  //       },
-  //       // Remove the global security: [{ bearerAuth: [] }] here
-  //     },
-  //   })
-  // )
+  .use(experienceController)  // First - working
+  .use(cvController)           // Second - restored
+  .use(projectController)      // Third - working
+  .use(projectImageController) // Fourth - restored
+  .use(authController)         // Fifth - restore auth controller
+  .use(
+    swagger({
+      documentation: {
+        info: {
+          title: "Portfolio API",
+          version: "1.0.0",
+        },
+        tags: [
+          { name: "Project Images", description: "Image management endpoints" },
+        ],
+        components: {
+          securitySchemes: {
+            bearerAuth: {
+              type: "http",
+              scheme: "bearer",
+              bearerFormat: "JWT",
+            },
+          },
+        },
+        // Remove the global security: [{ bearerAuth: [] }] here
+      },
+    })
+  )
   .onError(({ code, error, request }) => {
     console.error('[ElysiaError]', {
       code,
