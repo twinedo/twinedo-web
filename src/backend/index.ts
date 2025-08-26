@@ -25,32 +25,11 @@ const app = new Elysia({ prefix: "/api" })
   }))
   .use(cors())
   .get("/", () => ("Hello from Elysia!"))
-  .get("/direct-test", ({ set }) => {
-    console.log('[DirectTest] Direct test route called');
-    set.status = 200;
-    return { message: "Direct test working", timestamp: new Date().toISOString() };
-  })
-  .get("/project-images/test", ({ set }) => {
-    console.log('[DirectTest] Project images test route in main app');
-    set.status = 200;
-    return { message: "Direct project images test working", timestamp: new Date().toISOString() };
-  })
-  .get("/random-test-path/hello", ({ set }) => {
-    console.log('[DirectTest] Random test route');
-    set.status = 200;
-    return { message: "Random test route working", timestamp: new Date().toISOString() };
-  })
-  .get("/images-test/bucket/:name", ({ params, set }) => {
-    console.log('[DirectTest] Images test route with param:', params.name);
-    set.status = 200;
-    return { 
-      message: "Images test route working", 
-      bucket: params.name,
-      timestamp: new Date().toISOString() 
-    };
-  })
-  // TESTING: Project images controller enabled - cache fix v2
-  .use(projectImageController)         
+  .use(experienceController)
+  .use(cvController)           
+  .use(projectController)      
+  .use(projectImageController)
+  .use(authController)         
   .use(
     swagger({
       documentation: {
