@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+// Force deployment update: 2025-08-27 - Fixed JWT caching issue
 import { Elysia } from "elysia";
 import { cors } from "@elysiajs/cors";
 import { swagger } from "@elysiajs/swagger";
@@ -29,11 +30,27 @@ const app = new Elysia({ prefix: "/api" })
     set.status = 200;
     return { message: "Direct test working", timestamp: new Date().toISOString() };
   })
-  .use(experienceController)  // First - working
-  .use(cvController)           // Second - restored
-  .use(projectController)      // Third - working
-  .use(projectImageController) // Fourth - restored
-  .use(authController)         // Fifth - restore auth controller
+  .get("/project-images/test", ({ set }) => {
+    console.log('[DirectTest] Project images test route in main app');
+    set.status = 200;
+    return { message: "Direct project images test working", timestamp: new Date().toISOString() };
+  })
+  .get("/random-test-path/hello", ({ set }) => {
+    console.log('[DirectTest] Random test route');
+    set.status = 200;
+    return { message: "Random test route working", timestamp: new Date().toISOString() };
+  })
+  .get("/images-test/bucket/:name", ({ params, set }) => {
+    console.log('[DirectTest] Images test route with param:', params.name);
+    set.status = 200;
+    return { 
+      message: "Images test route working", 
+      bucket: params.name,
+      timestamp: new Date().toISOString() 
+    };
+  })
+  // TESTING: Project images controller enabled - cache fix v2
+  .use(projectImageController)         
   .use(
     swagger({
       documentation: {

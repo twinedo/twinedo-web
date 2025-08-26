@@ -3,15 +3,16 @@ import {
   getProjectImages,
 } from "./model";
 
-// Create completely isolated controller for testing
+// Completely isolated controller - NO JWT dependencies
 export const projectImageController = new Elysia({ prefix: "/project-images" })
   .get("/test", ({ set }) => {
-    console.log('[ProjectImages] Test endpoint called');
+    console.log('[ProjectImages] Test endpoint called - v2');
     set.status = 200;
     return {
       status: 200,
-      message: "Project images test endpoint working",
-      timestamp: new Date().toISOString()
+      message: "Project images test endpoint working - v2",
+      timestamp: new Date().toISOString(),
+      version: "2025-08-27-cache-fix"
     };
   })
   .get(
@@ -27,6 +28,7 @@ export const projectImageController = new Elysia({ prefix: "/project-images" })
           status: 200,
           message: "Get project images successfully",
           data: images,
+          version: "2025-08-27-cache-fix"
         };
       } catch (error) {
         console.error('[ProjectImages] Error getting images:', error);
