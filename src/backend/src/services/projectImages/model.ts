@@ -15,7 +15,17 @@ export const getProjectImages = async (bucket: string) => {
   return await prisma.projectImage.findMany({
     where: { bucket },
     orderBy: [{ isFeatured: 'desc' }, { order: 'asc' }],
-    select: { id: true, blobUrl: true }
+    select: { 
+      id: true, 
+      bucket: true,
+      filename: true,
+      isFeatured: true,
+      isThumbnail: true,
+      order: true,
+      createdAt: true,
+      updatedAt: true,
+      blobUrl: true 
+    }
   })
 }
 
