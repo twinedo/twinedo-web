@@ -40,7 +40,7 @@ export const useGetProjectById = (id: string) => {
 };
 
 const getProjectImages = async (bucket: string): Promise<ProjectImage[]> => {
-  const response = await fetch(`/api/project-images/${bucket}`);
+  const response = await fetch(`/api/images/${bucket}`);
 
   if (!response.ok) {
     const errorData: ApiErrorResponse = await response.json().catch(() => ({
