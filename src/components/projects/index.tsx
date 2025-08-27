@@ -28,36 +28,46 @@ export function Projects() {
   const currentData = selectedTab === "mobile" ? mobileData : websiteData;
 
   return (
-    <div>
+    <div className="relative w-full min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 overflow-hidden">
+      {/* Animated background elements */}
+      <div className="absolute inset-0">
+        <div className="absolute top-20 left-10 w-72 h-72 bg-blue-500/20 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-32 right-10 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        <div className="absolute top-1/2 left-1/3 w-48 h-48 bg-cyan-500/30 rounded-full blur-2xl animate-bounce delay-2000"></div>
+      </div>
+      
+      {/* Grid overlay */}
+      <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:50px_50px] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_0%,black_70%,transparent_110%)]" />
+      
       <Section>
-        <div className="max-w-4xl mx-auto">
+        <div className="relative z-10 max-w-4xl mx-auto">
           <div className="flex flex-col space-y-5">
-            <h1 className="text-center font-bold text-4xl">Projects</h1>
+            <h1 className="text-center font-bold text-4xl md:text-5xl lg:text-6xl text-transparent bg-clip-text bg-gradient-to-r from-white via-blue-100 to-cyan-200 mb-8">Projects</h1>
 
             {/* Tab Selector */}
-            <div className="w-3/4 self-center rounded shadow-[0_7px_29px_0_rgba(100,100,111,0.2)]">
+            <div className="w-3/4 self-center bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl shadow-2xl shadow-black/20">
               <div className="flex flex-row items-center relative justify-around">
                 {/* Mobile Tab */}
                 <div
                   className={`
                     flex-1 flex flex-row items-center justify-center 
-                    rounded-tl rounded-bl cursor-pointer h-10 font-semibold
+                    rounded-l-2xl cursor-pointer h-12 font-semibold transition-all duration-300
                     ${
                       selectedTab === "mobile"
-                        ? "bg-blue-900/30 text-black"
-                        : "bg-gray-200"
+                        ? "bg-gradient-to-r from-blue-500/40 via-white/20 to-purple-500/40 text-white border-r border-white/20 backdrop-blur-xl shadow-inner"
+                        : "bg-white/5 text-blue-100/70 hover:bg-white/10 hover:text-white"
                     }
                   `}
                   onClick={() => setSelectedTab("mobile")}
                 >
                   <AiOutlineMobile
-                    className={
-                      selectedTab === "mobile" ? "text-black" : "text-gray-500"
-                    }
+                    className={`text-xl ${
+                      selectedTab === "mobile" ? "text-white" : "text-blue-200/60"
+                    }`}
                   />
                   <span
                     className={`hidden md:flex ml-2 ${
-                      selectedTab === "mobile" ? "text-black" : "text-gray-500"
+                      selectedTab === "mobile" ? "text-white" : "text-blue-200/60"
                     }`}
                   >
                     Mobile Application
@@ -65,29 +75,29 @@ export function Projects() {
                 </div>
 
                 {/* Divider */}
-                <div className="w-px h-7 bg-blue-200"></div>
+                <div className="w-px h-8 bg-white/20"></div>
 
                 {/* Web Tab */}
                 <div
                   className={`
                     flex-1 flex flex-row items-center justify-center 
-                    rounded-tr rounded-br cursor-pointer h-10
+                    rounded-r-2xl cursor-pointer h-12 font-semibold transition-all duration-300
                     ${
                       selectedTab === "website"
-                        ? "bg-blue-900/30 text-black"
-                        : "bg-gray-200"
+                        ? "bg-gradient-to-r from-blue-500/40 via-white/20 to-purple-500/40 text-white border-l border-white/20 backdrop-blur-xl shadow-inner"
+                        : "bg-white/5 text-blue-100/70 hover:bg-white/10 hover:text-white"
                     }
                   `}
                   onClick={() => setSelectedTab("website")}
                 >
                   <TbWorld
-                    className={
-                      selectedTab === "website" ? "text-black" : "text-gray-500"
-                    }
+                    className={`text-xl ${
+                      selectedTab === "website" ? "text-white" : "text-blue-200/60"
+                    }`}
                   />
                   <span
                     className={`hidden md:flex ml-2 ${
-                      selectedTab === "website" ? "text-black" : "text-gray-500"
+                      selectedTab === "website" ? "text-white" : "text-blue-200/60"
                     }`}
                   >
                     Web Application
@@ -127,36 +137,36 @@ export function Projects() {
                     className="px-2.5 py-5"
                     onClick={() => onNavigate(o)}
                   >
-                    <div className="flex flex-col space-y-3 rounded-lg bg-[#1e3f66] cursor-pointer hover:shadow-[0_2px_8px_0_rgba(0,0,0,0.8)] transition-shadow">
+                    <div className="group flex flex-col space-y-3 rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10 cursor-pointer hover:bg-white/10 hover:border-white/20 hover:shadow-2xl hover:shadow-blue-500/20 transition-all duration-500 hover:-translate-y-2">
                       <div className="w-full h-[100px]">
                         <img
                           src={o.display}
                           alt="image"
-                          className="object-cover object-center w-full h-full overflow-hidden rounded-t-lg"
+                          className="object-cover object-center w-full h-full overflow-hidden rounded-t-2xl group-hover:scale-105 transition-transform duration-500"
                         />
                       </div>
                       <div className="pt-1 pb-2.5 px-2.5">
                         <div className="flex flex-col space-y-2">
                           <div className="flex flex-row items-center justify-between">
                             <div className="flex-1">
-                              <p className="text-white font-semibold truncate">
+                              <p className="text-white font-semibold truncate group-hover:text-blue-200 transition-colors">
                                 {o.project_name}
                               </p>
                             </div>
                             {o.platform === "mobile" ? (
-                              <AiOutlineMobile className="text-white" />
+                              <AiOutlineMobile className="text-blue-300 group-hover:text-cyan-300 transition-colors" />
                             ) : (
-                              <TbWorld className="text-white" />
+                              <TbWorld className="text-blue-300 group-hover:text-cyan-300 transition-colors" />
                             )}
                           </div>
-                          <div className="w-full h-px bg-white"></div>
+                          <div className="w-full h-px bg-gradient-to-r from-blue-400/30 via-white/20 to-purple-400/30"></div>
                           <div className="flex flex-row justify-between items-center">
-                            <p className="text-white text-xs text-center">
+                            <p className="text-blue-100/80 text-xs text-center group-hover:text-white transition-colors">
                               {o.year}
                             </p>
                             <div
                               onClick={() => onNavigate(o)}
-                              className="text-white border border-white rounded-full py-1 px-5 text-xs text-center hover:bg-white hover:text-black transition-colors"
+                              className="text-white border border-white/30 bg-white/10 backdrop-blur-sm rounded-full py-1 px-5 text-xs text-center hover:bg-gradient-to-r hover:from-blue-500 hover:to-purple-500 hover:border-transparent transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/30"
                             >
                               Detail
                             </div>
