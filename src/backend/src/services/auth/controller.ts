@@ -1,7 +1,9 @@
 import { Elysia, t } from "elysia";
-import { loginUser, registerUser } from "./model";
+import { loginUser } from "./model";
 import jwt from "@elysiajs/jwt";
 import { jwtProps } from "../../utils/const";
+import bearer from "@elysiajs/bearer";
+import { adminMiddleware } from "./adminMiddleware";
 
 export const authController = new Elysia({ prefix: "/auth" })
     // .post(
@@ -61,6 +63,30 @@ export const authController = new Elysia({ prefix: "/auth" })
         email: t.String({ format: "email" }),
         password: t.String(),
       }),
+    }
+  )
+  .use(bearer())
+  .get(
+    "/admin/verify",
+    async ({ set }) => {
+      try {
+        set.status = 200;
+        return {
+          status: 200,
+          message: "Admin access verified",
+          data: { admin: true },
+        };
+      } catch (error) {
+        set.status = 403;
+        return {
+          status: 403,
+          message: "Admin verification failed",
+          error: error instanceof Error ? error.message : String(error),
+        };
+      }
+    },
+    {
+      beforeHandle: adminMiddleware()
     }
   )
   // .delete(

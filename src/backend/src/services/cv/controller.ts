@@ -4,7 +4,7 @@ import { staticPlugin } from "@elysiajs/static";
 import { mkdir, readFile, writeFile, access } from "node:fs/promises";
 import { join } from "node:path";
 import { unlink, constants } from "node:fs/promises";
-import { authSwagger } from "../../utils/fun";
+import { adminMiddleware } from "../auth/adminMiddleware";
 import jwt from "@elysiajs/jwt";
 import { jwtProps } from "../../utils/const";
 import bearer from "@elysiajs/bearer";
@@ -69,10 +69,9 @@ export const cvController = baseCvController
   })
   .use(jwt(jwtProps))
   .use(bearer())
-  .guard(authSwagger(true), (app) =>
-    app.post(
-      "/upload",
-      async ({ body }) => {
+  .post(
+    "/upload",
+    async ({ body }) => {
         await ensureUploadDir();
 
         const file = Array.isArray(body.cv_file)
@@ -91,7 +90,7 @@ export const cvController = baseCvController
         try {
           await access(filePath, constants.F_OK);
           await unlink(filePath);
-        } catch (error) {
+        } catch {
           console.log("No existing file to delete");
         }
 
@@ -109,6 +108,7 @@ export const cvController = baseCvController
         };
       },
       {
+        beforeHandle: adminMiddleware(),
         body: t.Object({
           cv_file: t.Any(),
         }),
@@ -118,5 +118,4 @@ export const cvController = baseCvController
           return { cv_file };
         },
       }
-    )
-  );
+    );

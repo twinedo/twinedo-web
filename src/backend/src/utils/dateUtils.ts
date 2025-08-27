@@ -47,7 +47,7 @@ export const yyyyMmToReadable = (yyyyMm: string): string => {
   try {
     const date = parseISO(`${yyyyMm}-01`);
     return format(date, "MMMM yyyy");
-  } catch (error) {
+  } catch {
     return yyyyMm; // Return original if formatting fails
   }
 };
@@ -60,7 +60,7 @@ export const epochToReadable = (epoch: number): string => {
   try {
     const date = fromUnixTime(epoch);
     return format(date, "MMMM yyyy");
-  } catch (error) {
+  } catch {
     return "Invalid date";
   }
 };

@@ -9,7 +9,7 @@ import {
 import { staticPlugin } from "@elysiajs/static";
 import { ensureBucketExists, deleteProjectFiles } from "./utils";
 import { prisma } from "../../../prisma/client";
-import { authSwagger } from "../../utils/fun";
+import { adminMiddleware } from "../auth/adminMiddleware";
 import jwt from "@elysiajs/jwt";
 import { jwtProps } from "../../utils/const";
 import bearer from "@elysiajs/bearer";
@@ -31,11 +31,9 @@ if (process.env.NODE_ENV !== 'production' && PROJECTS_UPLOAD_DIR) {
 export const projectController = baseProjectController
   .use(jwt(jwtProps))
   .use(bearer())
-  .guard(authSwagger(true), (app) =>
-    app
-      .post(
-        "/",
-        async ({ body, set }) => {
+  .post(
+    "/",
+    async ({ body, set }) => {
           try {
             await ensureBucketExists(body.bucket);
 
@@ -65,6 +63,7 @@ export const projectController = baseProjectController
           }
         },
         {
+          beforeHandle: adminMiddleware(),
           body: t.Object({
             year: t.String(),
             platform: t.Union([t.Literal("mobile"), t.Literal("website")]),
@@ -77,9 +76,6 @@ export const projectController = baseProjectController
             display: t.String(),
             bucket: t.String(),
           }),
-          detail: {
-            security: [{ bearerAuth: [] }], // Link to Swagger security scheme
-          },
         }
       )
       .patch(
@@ -107,6 +103,7 @@ export const projectController = baseProjectController
           }
         },
         {
+          beforeHandle: adminMiddleware(),
           params: t.Object({
             id: t.String(),
           }),
@@ -161,14 +158,13 @@ export const projectController = baseProjectController
           }
         },
         {
+          beforeHandle: adminMiddleware(),
           params: t.Object({
             id: t.String(),
           }),
         }
       )
-  )
-  // Create project
-
+  
   // Get all projects (with optional platform filter)
   .get(
     "/",
@@ -237,4 +233,3 @@ export const projectController = baseProjectController
       }),
     }
   );
-// Update project
