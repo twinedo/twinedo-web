@@ -17,13 +17,18 @@ import getConfig from "next/config";
 
 const { PROJECTS_UPLOAD_DIR } = getConfig().serverRuntimeConfig;
 
-export const projectController = new Elysia({ prefix: "/project" })
-  .use(
+const baseProjectController = new Elysia({ prefix: "/project" });
+
+if (process.env.NODE_ENV !== 'production' && PROJECTS_UPLOAD_DIR) {
+  baseProjectController.use(
     staticPlugin({
       assets: PROJECTS_UPLOAD_DIR,
       prefix: "/project/files",
     })
-  )
+  );
+}
+
+export const projectController = baseProjectController
   .use(jwt(jwtProps))
   .use(bearer())
   .guard(authSwagger(true), (app) =>

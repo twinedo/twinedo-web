@@ -143,7 +143,7 @@ export function ProjectDetail({
             {/* Description Section */}
             <div className="flex flex-col space-y-2">
               <h2 className="font-bold">Description</h2>
-              <p>{data?.description[0]}</p>
+              <p>{typeof data.description === 'string' ? data.description : data?.description?.map((item: string) => item)}</p>
             </div>
 
             {/* Available On Section */}
