@@ -1,33 +1,34 @@
 'use client'
 import Slider from "react-slick";
+import { motion } from "framer-motion";
 import { arrImages } from "../../utils/const";
 import { Section } from "../section";
 
 export function Stacks() {
   const settings = {
-    dots: true,
+    dots: false,
     infinite: arrImages.length > 3,
     arrows: false,
     autoplay: true,
-    speed: 500,
+    speed: 3000,
+    autoplaySpeed: 0,
+    cssEase: "linear",
     slidesToShow: 6,
     slidesToScroll: 1,
+    pauseOnHover: true,
     responsive: [
       {
         breakpoint: 1024,
         settings: {
-          slidesToShow: 6,
+          slidesToShow: 5,
           slidesToScroll: 1,
-          infinite: true,
-          dots: true,
         },
       },
       {
         breakpoint: 600,
         settings: {
-          slidesToShow: 5,
-          slidesToScroll: 5,
-          initialSlide: 1,
+          slidesToShow: 4,
+          slidesToScroll: 1,
         },
       },
       {
@@ -41,34 +42,142 @@ export function Stacks() {
   };
 
   return (
-    <div className="bg-gray-500">
-      <Section>
-        <div className="max-w-4xl mx-auto">
-          <div className="flex flex-col space-y-5 relative overflow-hidden">
-            <div className="flex flex-row items-center space-x-4">
-              <p className="font-bold text-base text-white tracking-[0.3em]">
-                STACKS
+    <div className="relative bg-gradient-to-r from-gray-900 via-slate-800 to-gray-900 overflow-hidden">
+      {/* Background effects */}
+      <div className="absolute inset-0">
+        <div className="absolute top-10 left-20 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-10 right-20 w-80 h-80 bg-purple-500/10 rounded-full blur-3xl animate-pulse delay-1000" />
+      </div>
+      
+      {/* Animated grid */}
+      <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:40px_40px] animate-pulse" />
+      
+      <Section className="relative z-10">
+        <div className="max-w-7xl mx-auto px-4">
+          <motion.div 
+            className="space-y-12"
+            initial={{ opacity: 0, y: 50 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            viewport={{ once: true }}
+          >
+            {/* Header */}
+            <motion.div 
+              className="text-center space-y-6"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2, duration: 0.6 }}
+              viewport={{ once: true }}
+            >
+              <div className="flex items-center justify-center space-x-4">
+                <div className="h-1 w-16 bg-gradient-to-r from-blue-400 to-cyan-400 rounded-full" />
+                <h2 className="font-bold text-3xl md:text-4xl text-transparent bg-clip-text bg-gradient-to-r from-white via-blue-100 to-cyan-200">
+                  TECHNOLOGY STACK
+                </h2>
+                <div className="h-1 w-16 bg-gradient-to-r from-cyan-400 to-blue-400 rounded-full" />
+              </div>
+              <p className="text-gray-300 text-lg max-w-2xl mx-auto">
+                Technologies and tools I use to bring ideas to life
               </p>
-              <div className="h-[3px] w-[45px] bg-white" />
-            </div>
+            </motion.div>
 
-            <Slider {...settings}>
-              {arrImages.map((o) => (
-                <div key={o.id} className="cursor-pointer mx-1">
-                  <img
-                    src={o.path}
-                    alt={o.name}
-                    className="
-                      grayscale
-                      hover:grayscale-0
-                      transition-all
-                      w-[50px] sm:w-[70px] md:w-[100px]
-                    "
-                  />
-                </div>
+            {/* Tech Stack Carousel */}
+            <motion.div
+              className="relative"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4, duration: 0.8 }}
+              viewport={{ once: true }}
+            >
+              <div className="relative overflow-hidden rounded-3xl bg-white/5 backdrop-blur-sm border border-white/10 p-8">
+                <Slider {...settings}>
+                  {arrImages.map((tech, index) => (
+                    <motion.div 
+                      key={tech.id} 
+                      className="px-4"
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      whileInView={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: index * 0.05, duration: 0.4 }}
+                      viewport={{ once: true }}
+                    >
+                      <motion.div 
+                        className="group relative p-6 bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl hover:bg-white/20 transition-all duration-500 cursor-pointer"
+                        whileHover={{ 
+                          scale: 1.1, 
+                          y: -10,
+                          rotate: [0, 2, -2, 0],
+                        }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        {/* Glow effect */}
+                        <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl" />
+                        
+                        {/* Content */}
+                        <div className="relative z-10 flex flex-col items-center space-y-3">
+                          <div className="relative">
+                            <img
+                              src={tech.path}
+                              alt={tech.name}
+                              className="w-16 h-16 md:w-20 md:h-20 object-contain filter grayscale group-hover:grayscale-0 transition-all duration-500 group-hover:drop-shadow-[0_0_10px_rgba(59,130,246,0.5)]"
+                            />
+                            {/* Animated ring */}
+                            <div className="absolute inset-0 border-2 border-blue-400/0 group-hover:border-blue-400/50 rounded-full group-hover:animate-spin transition-all duration-300" />
+                          </div>
+                          
+                          <div className="text-center">
+                            <h3 className="text-white font-semibold text-sm md:text-base group-hover:text-blue-200 transition-colors">
+                              {tech.name}
+                            </h3>
+                          </div>
+                          
+                          {/* Hover indicator */}
+                          <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-blue-400 rounded-full opacity-0 group-hover:opacity-100 group-hover:animate-bounce transition-all duration-300" />
+                        </div>
+                        
+                        {/* Animated border */}
+                        <div className="absolute inset-0 rounded-2xl border-2 border-transparent group-hover:border-blue-400/30 transition-all duration-300" />
+                      </motion.div>
+                    </motion.div>
+                  ))}
+                </Slider>
+                
+                {/* Gradient overlays */}
+                <div className="absolute left-0 top-0 w-20 h-full bg-gradient-to-r from-gray-900/50 to-transparent z-10 pointer-events-none" />
+                <div className="absolute right-0 top-0 w-20 h-full bg-gradient-to-l from-gray-900/50 to-transparent z-10 pointer-events-none" />
+              </div>
+            </motion.div>
+            
+            {/* Stats */}
+            <motion.div 
+              className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-12"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.6, duration: 0.6 }}
+              viewport={{ once: true }}
+            >
+              {[
+                { label: "Technologies", value: `${arrImages.length}+` },
+                { label: "Years Experience", value: "5+" },
+                { label: "Projects", value: "20+" },
+                { label: "Happy Clients", value: "10+" }
+              ].map((stat, index) => (
+                <motion.div 
+                  key={stat.label}
+                  className="text-center p-4 bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 hover:bg-white/10 transition-colors"
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  whileInView={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.8 + index * 0.1, duration: 0.4 }}
+                  viewport={{ once: true }}
+                  whileHover={{ scale: 1.05 }}
+                >
+                  <div className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-400">
+                    {stat.value}
+                  </div>
+                  <div className="text-gray-300 text-sm mt-1">{stat.label}</div>
+                </motion.div>
               ))}
-            </Slider>
-          </div>
+            </motion.div>
+          </motion.div>
         </div>
       </Section>
     </div>
