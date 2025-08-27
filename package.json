@@ -42,7 +42,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
-    "@prisma/client": "^6.12.0",
+    "@prisma/client": "^6.14.0",
     "@tanstack/eslint-plugin-query": "^5.81.2",
     "@types/bun": "^1.2.18",
     "@types/node": "^20",

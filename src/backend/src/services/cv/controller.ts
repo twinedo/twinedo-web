@@ -65,7 +65,7 @@ export const cvController = baseCvController
 
     // Return the file
     const fileBuffer = await readFile(filePath);
-    return new Response(fileBuffer);
+    return new Response(fileBuffer.buffer);
   })
   .use(jwt(jwtProps))
   .use(bearer())
