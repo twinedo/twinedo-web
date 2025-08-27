@@ -21,14 +21,14 @@ export function Footer() {
             <div className="flex items-center justify-center gap-3 hover:scale-105 transition-transform duration-300">
               <CodeBracketIcon className="w-8 h-8 text-blue-400" />
               <h3 className="text-2xl md:text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-300">
-                Let's Build Something Amazing
+                Let&apos;s Build Something Amazing
               </h3>
               <CodeBracketIcon className="w-8 h-8 text-purple-400" />
             </div>
             
             <p className="text-gray-400 text-lg max-w-2xl mx-auto leading-relaxed">
-              I'm always excited to work on new projects and collaborate with innovative teams.
-              <br />Ready to turn your ideas into reality? Let's connect!
+              I&apos;m always excited to work on new projects and collaborate with innovative teams.
+              <br />Ready to turn your ideas into reality? Let&apos;s connect!
             </p>
           </div>
           
