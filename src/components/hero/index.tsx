@@ -44,7 +44,7 @@ export function Hero() {
               transition={{ delay: 0.4, duration: 0.8 }}
             >
               <span className="block bg-gradient-to-r from-blue-400 via-purple-500 to-cyan-400 bg-clip-text text-transparent animate-pulse">
-                HEY, I'M TWIN EDO
+                HEY, I&apos;M TWIN EDO
               </span>
             </motion.h1>
 

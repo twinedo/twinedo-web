@@ -32,7 +32,7 @@ export function Education() {
                 <p className="font-bold text-white text-lg">
                   Informatics Engineering - Gunadarma University
                 </p>
-                <p className="text-blue-100/80">Bachelor's degree graduate</p>
+                <p className="text-blue-100/80">Bachelor&apos;s degree graduate</p>
               </Timeline>
             </div>
           </div>
