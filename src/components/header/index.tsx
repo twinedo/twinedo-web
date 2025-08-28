@@ -1,12 +1,13 @@
 "use client";
 import { useMemo } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { CodeBracketIcon, DocumentIcon, RectangleStackIcon } from "@heroicons/react/24/outline";
 
 export const Header = () => {
   const pathname = usePathname();
+  const navigation = useRouter()
 
   const navItems = useMemo(
     () => [
@@ -53,6 +54,7 @@ export const Header = () => {
           className="flex-row flex gap-x-3 items-center group cursor-pointer"
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
+          onClick={() => navigation.replace('/')}
         >
           <div className="relative">
             <div className="absolute inset-0 bg-gradient-to-tr from-blue-400/30 to-purple-400/30 rounded-full blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
