@@ -12,10 +12,10 @@ export function Timeline(props: IProps) {
 
   return (
     <div className={`flex flex-col md:flex-row gap-2 md:gap-5 ${className}`}>
-      <div className="flex-1">
+      <div className="flex flex-1">
         <p className="text-blue-200/80 font-medium">{dateText}</p>
       </div>
-      <div className="flex-4">
+      <div className="flex flex-[2]">
         <div className="
           border-l-0
           md:border-l-2
