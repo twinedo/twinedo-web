@@ -106,6 +106,25 @@
   justify-content: center;
 }
 
+/* Mobile slider improvements */
+@media (max-width: 640px) {
+  .slick-slide {
+    padding: 0 4px;
+  }
+  
+  .slick-list {
+    margin: 0 -4px;
+  }
+  
+  .custom-dots {
+    bottom: -40px !important;
+  }
+  
+  .custom-dots li {
+    margin: 0 4px;
+  }
+}
+
 /* Smooth scrolling */
 html {
   scroll-behavior: smooth;

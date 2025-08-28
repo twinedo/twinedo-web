@@ -13,40 +13,40 @@ export function Certification() {
       </div>
       
       <Section>
-        <div className="relative z-10 max-w-4xl mx-auto">
-          <div className="flex flex-col space-y-8">
-            <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-6 shadow-2xl shadow-black/20">
-              <div className="flex flex-row items-center space-x-4">
-                <p className="font-bold text-xl text-white tracking-[0.3em]">
+        <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6">
+          <div className="flex flex-col space-y-6 sm:space-y-8">
+            <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-2xl shadow-black/20">
+              <div className="flex flex-row items-center space-x-3 sm:space-x-4">
+                <p className="font-bold text-lg sm:text-xl text-white tracking-[0.2em] sm:tracking-[0.3em]">
                   CERTIFICATIONS
                 </p>
-                <div className="h-[3px] w-[45px] bg-gradient-to-r from-cyan-400 to-blue-500 rounded-full" />
+                <div className="h-[2px] sm:h-[3px] w-[35px] sm:w-[45px] bg-gradient-to-r from-cyan-400 to-blue-500 rounded-full" />
               </div>
             </div>
 
-            <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 space-y-6">
+            <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl sm:rounded-2xl p-4 sm:p-6 space-y-4 sm:space-y-6">
               <Timeline dateText='Feb 2021' bgCard={generateRandomLightColor()}>
-                <p className="font-bold text-white text-lg">
+                <p className="font-bold text-white text-base sm:text-lg leading-tight">
                   Belajar Membuat Aplikasi Flutter untuk Pemula
                 </p>
-                <p className="text-blue-100/80">Dicoding.com</p>
+                <p className="text-blue-100/80 text-sm sm:text-base mt-1 sm:mt-2">Dicoding.com</p>
               </Timeline>
               
               <Timeline dateText='Jan 2020' bgCard={generateRandomLightColor()}>
-                <p className="font-bold text-white text-lg">Memulai Pemrograman Dengan Kotlin</p>
-                <p className="text-blue-100/80">Dicoding.com</p>
+                <p className="font-bold text-white text-base sm:text-lg leading-tight">Memulai Pemrograman Dengan Kotlin</p>
+                <p className="text-blue-100/80 text-sm sm:text-base mt-1 sm:mt-2">Dicoding.com</p>
               </Timeline>
 
               <Timeline dateText='Oct 2019' bgCard={generateRandomLightColor()}>
-                <p className="font-bold text-white text-lg">Belajar Fundamental Aplikasi Android</p>
-                <p className="text-blue-100/80">Dicoding.com</p>
+                <p className="font-bold text-white text-base sm:text-lg leading-tight">Belajar Fundamental Aplikasi Android</p>
+                <p className="text-blue-100/80 text-sm sm:text-base mt-1 sm:mt-2">Dicoding.com</p>
               </Timeline>
 
               <Timeline dateText='Jun 2019' bgCard={generateRandomLightColor()}>
-                <p className="font-bold text-white text-lg">
+                <p className="font-bold text-white text-base sm:text-lg leading-tight">
                   Belajar Membuat Aplikasi Android untuk Pemula
                 </p>
-                <p className="text-blue-100/80">Dicoding.com</p>
+                <p className="text-blue-100/80 text-sm sm:text-base mt-1 sm:mt-2">Dicoding.com</p>
               </Timeline>
             </div>
           </div>

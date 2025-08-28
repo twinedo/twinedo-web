@@ -11,9 +11,9 @@ export function Timeline(props: IProps) {
   const { bgCard, children, dateText, className = "" } = props;
 
   return (
-    <div className={`flex flex-col md:flex-row gap-2 md:gap-5 ${className}`}>
+    <div className={`flex flex-col md:flex-row gap-3 sm:gap-4 md:gap-5 ${className}`}>
       <div className="flex flex-1">
-        <p className="text-blue-200/80 font-medium">{dateText}</p>
+        <p className="text-blue-200/80 font-medium text-sm sm:text-base">{dateText}</p>
       </div>
       <div className="flex flex-[2]">
         <div className="
@@ -22,10 +22,12 @@ export function Timeline(props: IProps) {
           md:border-l-blue-400/50
           pl-0
           md:pl-[30px]
-          mb-[30px]
+          mb-[20px]
+          sm:mb-[30px]
           md:mb-0
+          w-full
         ">
-          <div className="p-6 rounded-2xl bg-white/10 backdrop-blur-xl border border-white/20 shadow-lg hover:bg-white/15 transition-all duration-300">
+          <div className="p-4 sm:p-6 rounded-xl sm:rounded-2xl bg-white/10 backdrop-blur-xl border border-white/20 shadow-lg hover:bg-white/15 transition-all duration-300">
             {children}
           </div>
         </div>

@@ -13,7 +13,7 @@ interface PassDataAction {
 
 export const initialPassDataState: Project = {
 	bucket: '',
-	description: [''],
+	description: '',
 	display: '',
 	id: '',
 	key: '',

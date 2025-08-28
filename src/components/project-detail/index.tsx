@@ -9,6 +9,7 @@ import type { Project } from "@/shared";
 import { useRouter } from "next/navigation";
 import usePassDetailStore, { initialPassDataState } from "@/stores/pass-detail-store";
 import Link from 'next/link'
+import { formatDescription } from '@/utils/const'
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 
@@ -158,7 +159,7 @@ export function ProjectDetail({
             <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-6 shadow-2xl shadow-black/20">
               <div className="flex flex-col space-y-4">
                 <h2 className="font-bold text-2xl text-white">Description</h2>
-                <p className="text-blue-100/90 leading-relaxed text-lg">{typeof data.description === 'string' ? data.description : data?.description?.map((item: string) => item)}</p>
+                <p className="text-blue-100/90 leading-relaxed text-lg whitespace-pre-line">{formatDescription(data.description)}</p>
               </div>
             </div>
 

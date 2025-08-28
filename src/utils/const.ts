@@ -59,3 +59,12 @@ export const arrImages = [
 
 export const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 
   `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`;
+
+// Utility function to format project descriptions
+export const formatDescription = (description: string | string[]): string => {
+  if (Array.isArray(description)) {
+    // Join array elements with newlines or return first element
+    return description.filter(line => line.trim()).join('\n');
+  }
+  return description || '';
+};
