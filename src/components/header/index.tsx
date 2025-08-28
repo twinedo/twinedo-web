@@ -57,16 +57,16 @@ export const Header = () => {
           <div className="relative">
             <div className="absolute inset-0 bg-gradient-to-tr from-blue-400/30 to-purple-400/30 rounded-full blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             <img
-              src="/img/profile.jpeg"
+              src="/img/logo.png"
               alt="Logo"
               className="relative h-10 w-10 rounded-full ring-2 ring-white/20 group-hover:ring-blue-400/60 transition-all duration-300 shadow-lg"
             />
           </div>
-          <div className="flex flex-col">
+          <div className="md:flex flex-col hidden ">
             <span className="text-lg font-bold bg-gradient-to-r from-white via-blue-100 to-cyan-200 bg-clip-text text-transparent group-hover:from-blue-300 group-hover:to-purple-300 transition-all duration-300">
               twinedo
             </span>
-            <span className="text-xs text-blue-200/70 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+            <span className="text-xs text-blue-200/70">
               Frontend Developer
             </span>
           </div>
