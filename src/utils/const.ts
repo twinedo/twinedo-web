@@ -1,18 +1,18 @@
 export const arrImages = [
   {
     id: 1,
-    name: "Android",
-    path: "/img/1. Android.png",
+    name: "React",
+    path: "/img/1. React.webp",
   },
   {
     id: 2,
-    name: "Javascript",
-    path: "/img/2. Javascript.png",
+    name: "Next",
+    path: "/img/2. Next.png",
   },
   {
     id: 3,
-    name: "React",
-    path: "/img/3. React.webp",
+    name: "Expo",
+    path: "/img/3. Expo.png",
   },
   {
     id: 4,
@@ -21,35 +21,39 @@ export const arrImages = [
   },
   {
     id: 5,
-    name: "Firebase",
-    path: "/img/5. Firebase.png",
+    name: "Javascript",
+    path: "/img/5. Javascript.png",
   },
-  // {
-  //   id: 6,
-  //   name: "Flutter",
-  //   // path: '/img/6. Flutter.png',
-  //   path: "https://www.kindpng.com/picc/m/355-3557482_flutter-logo-png-transparent-png.png",
-  // },
+  {
+    id: 6,
+    name: "Android",
+    path: "/img/6. Android.png",
+  },
   {
     id: 7,
-    name: "Ionic",
-    path: "/img/7. Ionic.png",
+    name: "Tailwind Css",
+    path: "/img/7. Tailwind.png",
   },
-  // {
-  //   id: 8,
-  //   name: "Dart",
-  //   path: "/img/8. Dart.png",
-  // },
+  {
+    id: 8,
+    name: "Firebase",
+    path: "/img/8. Firebase.png",
+  },
   {
     id: 9,
-    name: "Kotlin",
-    path: "/img/9. Kotlin.png",
+    name: "Ionic",
+    path: "/img/9. Ionic.png",
   },
   {
     id: 10,
-    name: "Tailwind Css",
-    path: "/img/11. Tailwind.png",
+    name: "Zustand",
+    path: "/img/10. Zustand.png",
   },
+  {
+    id: 11,
+    name: "Vercel",
+    path: "/img/11. Vercel.png",
+  }
 ];
 
 
