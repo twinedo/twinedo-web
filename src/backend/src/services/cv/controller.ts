@@ -39,6 +39,7 @@ if (process.env.NODE_ENV === 'development' && !process.env.VERCEL && CV_UPLOAD_D
 }
 
 export const cvController = baseCvController
+  // Public routes - no authentication required
   .get("/", async () => {
     const cv = await getCV();
     return { cv };
@@ -98,50 +99,54 @@ export const cvController = baseCvController
       return errorResponse("CV file not found", "", 404);
     }
   })
-  .use(jwt(jwtProps))
-  .use(bearer())
-  .post(
-    "/upload",
-    async ({ body }) => {
-        const file = Array.isArray(body.cv_file)
-          ? body.cv_file[0]
-          : body.cv_file;
+  // Protected routes - authentication required (JWT middleware applied here)
+  .group("/", (app) => 
+    app
+      .use(jwt(jwtProps))
+      .use(bearer())
+      .post(
+        "/upload",
+        async ({ body }) => {
+            const file = Array.isArray(body.cv_file)
+              ? body.cv_file[0]
+              : body.cv_file;
 
-        if (!file) throw new Error("No file uploaded");
-        if (file.type !== "application/pdf")
-          throw new Error("Only PDF files allowed");
+            if (!file) throw new Error("No file uploaded");
+            if (file.type !== "application/pdf")
+              throw new Error("Only PDF files allowed");
 
-        // Constant filename
-        const filename = "Twin Edo Nugraha - CV.pdf";
+            // Constant filename
+            const filename = "Twin Edo Nugraha - CV.pdf";
 
-        // Upload to Vercel Blob
-        const fileBuffer = await file.arrayBuffer();
-        const blob = await put(`cv/${filename}`, fileBuffer, {
-          access: 'public',
-          addRandomSuffix: false,
-        });
+            // Upload to Vercel Blob
+            const fileBuffer = await file.arrayBuffer();
+            const blob = await put(`cv/${filename}`, fileBuffer, {
+              access: 'public',
+              addRandomSuffix: false,
+            });
 
-        // Save to database with blob URL
-        const data = await createOrUpdateCV(filename, blob.url);
+            // Save to database with blob URL
+            const data = await createOrUpdateCV(filename, blob.url);
 
-        return {
-          status: 201,
-          message: "CV uploaded successfully",
-          data: {
-            ...data,
-            url: blob.url
+            return {
+              status: 201,
+              message: "CV uploaded successfully",
+              data: {
+                ...data,
+                url: blob.url
+              },
+            };
+        },
+        {
+          beforeHandle: adminMiddleware(),
+          body: t.Object({
+            cv_file: t.Any(),
+          }),
+          parse: async ({ request }) => {
+            const formData = await request.formData();
+            const cv_file = formData.get("cv_file");
+            return { cv_file };
           },
-        };
-    },
-    {
-      beforeHandle: adminMiddleware(),
-      body: t.Object({
-        cv_file: t.Any(),
-      }),
-      parse: async ({ request }) => {
-        const formData = await request.formData();
-        const cv_file = formData.get("cv_file");
-        return { cv_file };
-      },
-    }
+        }
+      )
   );

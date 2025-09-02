@@ -13,9 +13,9 @@ export const createOrUpdateCV = async (filename: string, blobUrl?: string) => {
 export const getCV = async () => {
   try {
     return await prisma.cV.findFirst()
-  } catch (error: any) {
+  } catch (error) {
     // If blobUrl column doesn't exist, select only existing columns
-    if (error.code === 'P2022' && error.message.includes('blobUrl')) {
+    if (error instanceof Error && 'code' in error && error.code === 'P2022' && error.message.includes('blobUrl')) {
       return await prisma.cV.findFirst({
         select: {
           id: true,
