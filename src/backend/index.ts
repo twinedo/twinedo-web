@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// FORCE DEPLOYMENT 2025-08-27: Clear project-images cache issue
+// FORCE DEPLOYMENT 2025-09-02: Clear CV download cache issue
 // JWT error persists due to Vercel route-specific caching
 import { Elysia } from "elysia";
 import { cors } from "@elysiajs/cors";
@@ -9,7 +9,6 @@ import { experienceController } from "./src/services/experience";
 import { projectController } from "./src/services/projects";
 import { projectImageController } from "./src/services/projectImages";
 import { authController } from "./src/services/auth";
-import { downloadController } from "./src/services/download";
 import { prisma } from "./prisma/client";
 
 const app = new Elysia({ prefix: "/api" })
@@ -27,6 +26,93 @@ const app = new Elysia({ prefix: "/api" })
   }))
   .use(cors())
   .get("/", () => ("Hello from Elysia!"))
+  // Completely isolated CV download endpoint - no controller dependencies
+  .get("/download/cv", async ({ set }) => {
+    try {
+      console.log("Standalone CV download endpoint called");
+      
+      // Import dependencies directly to avoid controller conflicts
+      const { prisma } = await import('./prisma/client');
+      const getConfig = (await import('next/config')).default;
+      const { join } = await import('node:path');
+      const { readFile } = await import('node:fs/promises');
+      
+      const { CV_UPLOAD_DIR } = getConfig().serverRuntimeConfig;
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 
+        `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`;
+
+      // Get CV data directly
+      let cv;
+      try {
+        cv = await prisma.cV.findFirst();
+        console.log("CV data:", cv);
+      } catch (dbError) {
+        console.error("Database error:", dbError);
+        set.status = 500;
+        return { status: 500, message: "Database error" };
+      }
+
+      if (!cv) {
+        set.status = 404;
+        set.headers = {
+          "Access-Control-Allow-Origin": baseUrl || "*",
+          "Access-Control-Allow-Methods": "GET",
+        };
+        return { status: 404, message: "No CV found" };
+      }
+
+      // If CV has blobUrl, fetch and serve it
+      if (cv && 'blobUrl' in cv && cv.blobUrl && typeof cv.blobUrl === 'string') {
+        console.log("Using blob URL:", cv.blobUrl);
+        try {
+          const blobResponse = await fetch(cv.blobUrl);
+          if (!blobResponse.ok) {
+            throw new Error(`Failed to fetch blob: ${blobResponse.status}`);
+          }
+
+          const blobData = await blobResponse.arrayBuffer();
+          
+          set.headers = {
+            "Content-Type": "application/pdf",
+            "Content-Disposition": `attachment; filename="${cv.filename}"`,
+            "Access-Control-Allow-Origin": baseUrl || "*",
+            "Access-Control-Expose-Headers": "Content-Disposition",
+          };
+
+          return new Response(new Uint8Array(blobData));
+        } catch (blobError) {
+          console.error('Error fetching blob:', blobError);
+          // Fall through to filesystem fallback
+        }
+      }
+
+      // Fallback to filesystem
+      console.log("Using filesystem fallback");
+      const filePath = join(CV_UPLOAD_DIR, cv.filename);
+      console.log("File path:", filePath);
+
+      try {
+        const fileBuffer = await readFile(filePath);
+        
+        set.headers = {
+          "Content-Type": "application/pdf",
+          "Content-Disposition": `attachment; filename="${cv.filename}"`,
+          "Access-Control-Allow-Origin": baseUrl || "*",
+          "Access-Control-Expose-Headers": "Content-Disposition",
+        };
+
+        return new Response(new Uint8Array(fileBuffer));
+      } catch (fileError) {
+        console.error('Error reading file:', fileError);
+        set.status = 404;
+        return { status: 404, message: "CV file not found" };
+      }
+    } catch (error) {
+      console.error('Download CV error:', error);
+      set.status = 500;
+      return { status: 500, message: "Internal server error" };
+    }
+  })
   .get("/images/:bucket", async ({ params: { bucket }, set }) => {
     try {
       // Import the function directly here to bypass controller caching
@@ -63,7 +149,6 @@ const app = new Elysia({ prefix: "/api" })
     }
   })
   .use(experienceController)
-  .use(downloadController)  // Add download service BEFORE other controllers
   .use(cvController)           
   .use(projectController)      
   .use(projectImageController)
