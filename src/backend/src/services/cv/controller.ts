@@ -56,7 +56,7 @@ export const cvController = baseCvController
     }
 
     // If CV has blobUrl, fetch and serve it
-    if (cv && 'blobUrl' in cv && cv.blobUrl) {
+    if (cv && 'blobUrl' in cv && cv.blobUrl && typeof cv.blobUrl === 'string') {
       try {
         const blobResponse = await fetch(cv.blobUrl);
         if (!blobResponse.ok) {
