@@ -54,15 +54,28 @@ export const cvController = baseCvController
       return errorResponse("No CV found", "", 404);
     }
 
-    // If CV has blobUrl, redirect to it
+    // If CV has blobUrl, fetch and serve it
     if (cv.blobUrl) {
-      set.headers = {
-        "Access-Control-Allow-Origin": baseUrl || "*",
-        "Access-Control-Allow-Methods": "GET",
-      };
-      set.status = 302;
-      set.headers.Location = cv.blobUrl;
-      return;
+      try {
+        const blobResponse = await fetch(cv.blobUrl);
+        if (!blobResponse.ok) {
+          throw new Error(`Failed to fetch blob: ${blobResponse.status}`);
+        }
+
+        const blobData = await blobResponse.arrayBuffer();
+        
+        set.headers = {
+          "Content-Type": "application/pdf",
+          "Content-Disposition": `attachment; filename="${cv.filename}"`,
+          "Access-Control-Allow-Origin": baseUrl || "*",
+          "Access-Control-Expose-Headers": "Content-Disposition",
+        };
+
+        return new Response(new Uint8Array(blobData));
+      } catch (error) {
+        console.error('Error fetching blob:', error);
+        // Fall through to filesystem fallback
+      }
     }
 
     // Fallback to filesystem (for development or legacy)
