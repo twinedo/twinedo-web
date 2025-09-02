@@ -9,31 +9,8 @@ import { experienceController } from "./src/services/experience";
 import { projectController } from "./src/services/projects";
 import { projectImageController } from "./src/services/projectImages";
 import { authController } from "./src/services/auth";
-import { PrismaClient } from '@prisma/client';
-import { withAccelerate } from '@prisma/extension-accelerate';
 import bcrypt from "bcryptjs";
-
-// Create Prisma client with proper configuration for both development and production
-const createPrismaClient = () => {
-  // For Vercel deployment, we need to handle the database connection properly
-  const isVercel = !!process.env.VERCEL;
-  
-  if (isVercel && process.env.DIRECT_DATABASE_URL) {
-    // Use direct database connection for Vercel
-    console.log('Using direct database connection for Vercel deployment');
-    return new PrismaClient({
-      datasources: { db: { url: process.env.DIRECT_DATABASE_URL } },
-    });
-  } else {
-    // Use Accelerate for development or when DIRECT_DATABASE_URL is not set
-    console.log('Using Prisma Accelerate connection');
-    return new PrismaClient({
-      datasources: { db: { url: process.env.DATABASE_URL } },
-    }).$extends(withAccelerate());
-  }
-};
-
-const prisma = createPrismaClient();
+import { prisma } from './prisma/client';
 
 const app = new Elysia({ prefix: "/api" })
   .get('/health', () => ({ ok: true }))
@@ -133,7 +110,7 @@ const app = new Elysia({ prefix: "/api" })
           } else {
             cv = null;
           }
-        } catch (queryError) {
+        } catch {
           console.log("Failed to query with blobUrl, trying without...");
           // Fallback to query without blobUrl field (for older schema)
           cv = await prisma.$queryRaw`SELECT id, filename, "createdAt", "updatedAt" FROM "CV" LIMIT 1`;

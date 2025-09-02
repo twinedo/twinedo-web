@@ -27,8 +27,8 @@
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false,
 
-    // Emit settings
-    "declaration": true,
+    // Emit settings - disable declaration files to avoid TypeScript errors
+    "declaration": false,
     "sourceMap": true
   },
   "include": ["**/*", "../shared/**/*"],

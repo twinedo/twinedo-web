@@ -1,15 +1,13 @@
 import { Elysia, t } from "elysia";
 import { createOrUpdateCV, getCV } from "./model";
 import { staticPlugin } from "@elysiajs/static";
-import { mkdir, readFile, writeFile, access } from "node:fs/promises";
+import { mkdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { unlink, constants } from "node:fs/promises";
 import { adminMiddleware } from "../auth/adminMiddleware";
 import jwt from "@elysiajs/jwt";
 import { jwtProps } from "../../utils/const";
 import bearer from "@elysiajs/bearer";
 import getConfig from "next/config";
-import { errorResponse } from "../../../../shared";
 import { put } from "@vercel/blob";
 
 const { CV_UPLOAD_DIR } = getConfig().serverRuntimeConfig;
@@ -52,7 +50,11 @@ export const cvController = baseCvController
         "Access-Control-Allow-Origin": baseUrl || "*",
         "Access-Control-Allow-Methods": "GET",
       };
-      return errorResponse("No CV found", "", 404);
+      set.status = 404;
+      return {
+        status: 404,
+        message: "No CV found"
+      };
     }
 
     // If CV has blobUrl, fetch and serve it
@@ -73,8 +75,8 @@ export const cvController = baseCvController
         };
 
         return new Response(new Uint8Array(blobData));
-      } catch (error) {
-        console.error('Error fetching blob:', error);
+      } catch {
+        console.error('Error fetching blob:');
         // Fall through to filesystem fallback
       }
     }
@@ -96,7 +98,10 @@ export const cvController = baseCvController
       return new Response(new Uint8Array(fileBuffer));
     } catch (error) {
       set.status = 404;
-      return errorResponse("CV file not found", "", 404);
+      return {
+        status: 404,
+        message: "CV file not found"
+      };
     }
   })
   // Protected routes - authentication required (JWT middleware applied here)
