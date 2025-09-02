@@ -11,5 +11,20 @@ export const createOrUpdateCV = async (filename: string, blobUrl?: string) => {
 }
 
 export const getCV = async () => {
-  return await prisma.cV.findFirst()
+  try {
+    return await prisma.cV.findFirst()
+  } catch (error: any) {
+    // If blobUrl column doesn't exist, select only existing columns
+    if (error.code === 'P2022' && error.message.includes('blobUrl')) {
+      return await prisma.cV.findFirst({
+        select: {
+          id: true,
+          filename: true,
+          createdAt: true,
+          updatedAt: true
+        }
+      });
+    }
+    throw error;
+  }
 }
