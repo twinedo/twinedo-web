@@ -41,15 +41,35 @@ export const authController = new Elysia({ prefix: "/auth" })
     "/login",
     async ({ jwt, body, set }) => {
       try {
+        console.log("Login attempt for email:", body.email);
         const { user } = await loginUser(body.email, body.password);
-        const token = await jwt.sign(user)
+        console.log("User found:", user);
+        
+        // Check if jwt.sign is properly defined
+        if (!jwt || typeof jwt.sign !== 'function') {
+          console.error("JWT sign function is not available:", jwt);
+          set.status = 500;
+          return {
+            status: 500,
+            message: "Internal server error - JWT configuration issue",
+          };
+        }
+        
+        const token = await jwt.sign(user);
+        console.log("Token generated successfully");
+        
         set.status = 200;
+        // Return data in the format expected by the frontend
         return {
           status: 200,
           message: "Login successful",
-          data: { user, token },
+          data: {
+            user,
+            token
+          },
         };
       } catch (error) {
+        console.error("Login error:", error);
         set.status = 401;
         return {
           status: 401,
@@ -111,7 +131,7 @@ export const authController = new Elysia({ prefix: "/auth" })
   //   },
   //   {
   //     params: t.Object({
-  //       id: t.String(),
+  //     id: t.String(),
   //     }),
   //   }
   // );

@@ -10,6 +10,7 @@ import { projectController } from "./src/services/projects";
 import { projectImageController } from "./src/services/projectImages";
 import { authController } from "./src/services/auth";
 import { prisma } from "./prisma/client";
+import bcrypt from "bcryptjs";
 
 const app = new Elysia({ prefix: "/api" })
   .get('/health', () => ({ ok: true }))
@@ -24,6 +25,56 @@ const app = new Elysia({ prefix: "/api" })
     hasDatabaseUrl: !!process.env.DATABASE_URL,
     nodeEnv: process.env.NODE_ENV
   }))
+  // Setup endpoint to create admin user
+  .post('/setup-admin', async ({ set, body }) => {
+    try {
+      const { password } = body as { password: string };
+      
+      if (!password) {
+        set.status = 400;
+        return { status: 400, message: "Password is required" };
+      }
+      
+      // Check if admin user already exists
+      const existingAdmin = await prisma.user.findUnique({
+        where: { email: "twinedo.dev@gmail.com" }
+      });
+      
+      if (existingAdmin) {
+        set.status = 400;
+        return { status: 400, message: "Admin user already exists" };
+      }
+      
+      // Create admin user
+      const hashedPassword = await bcrypt.hash(password, 10);
+      const adminUser = await prisma.user.create({
+        data: {
+          email: "twinedo.dev@gmail.com",
+          password: hashedPassword,
+          role: "superadmin"
+        }
+      });
+      
+      set.status = 201;
+      return { 
+        status: 201, 
+        message: "Admin user created successfully",
+        data: {
+          id: adminUser.id,
+          email: adminUser.email,
+          role: adminUser.role
+        }
+      };
+    } catch (error) {
+      console.error("Setup admin error:", error);
+      set.status = 500;
+      return { 
+        status: 500, 
+        message: "Failed to create admin user",
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  })
   .use(cors())
   .get("/", () => ("Hello from Elysia!"))
   // Completely isolated CV download endpoint - no controller dependencies

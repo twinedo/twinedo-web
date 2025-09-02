@@ -44,7 +44,13 @@ export const adminMiddleware = () => {
         };
       }
 
-      return dataUser;
+      // Return success response instead of user data directly
+      set.status = 200;
+      return {
+        status: 200,
+        message: "Admin access verified",
+        data: { admin: true },
+      };
     } catch (error) {
       set.status = 401;
       return {
