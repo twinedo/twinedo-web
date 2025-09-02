@@ -9,21 +9,52 @@ import { experienceController } from "./src/services/experience";
 import { projectController } from "./src/services/projects";
 import { projectImageController } from "./src/services/projectImages";
 import { authController } from "./src/services/auth";
-import { prisma } from "./prisma/client";
+import { PrismaClient } from '@prisma/client';
+import { withAccelerate } from '@prisma/extension-accelerate';
 import bcrypt from "bcryptjs";
+
+// Create Prisma client with proper configuration for both development and production
+const createPrismaClient = () => {
+  // For Vercel deployment, we need to handle the database connection properly
+  const isVercel = !!process.env.VERCEL;
+  
+  if (isVercel && process.env.DIRECT_DATABASE_URL) {
+    // Use direct database connection for Vercel
+    console.log('Using direct database connection for Vercel deployment');
+    return new PrismaClient({
+      datasources: { db: { url: process.env.DIRECT_DATABASE_URL } },
+    });
+  } else {
+    // Use Accelerate for development or when DIRECT_DATABASE_URL is not set
+    console.log('Using Prisma Accelerate connection');
+    return new PrismaClient({
+      datasources: { db: { url: process.env.DATABASE_URL } },
+    }).$extends(withAccelerate());
+  }
+};
+
+const prisma = createPrismaClient();
 
 const app = new Elysia({ prefix: "/api" })
   .get('/health', () => ({ ok: true }))
   .get('/health/db', async () => {
-    // minimal DB check
-    await prisma.$queryRaw`SELECT 1`
-    return { db: 'ok' }
+    try {
+      // minimal DB check
+      await prisma.$queryRaw`SELECT 1`;
+      return { db: 'ok' };
+    } catch (error) {
+      console.error('Database health check failed:', error);
+      return { db: 'error', error: error instanceof Error ? error.message : 'Unknown error' };
+    }
   })
   .get('/debug/env', () => ({
     hasJwtSecret: !!process.env.JWT_SECRET,
     hasPublicJwtSecret: !!process.env.NEXT_PUBLIC_JWT_SECRET,
     hasDatabaseUrl: !!process.env.DATABASE_URL,
-    nodeEnv: process.env.NODE_ENV
+    hasDirectDatabaseUrl: !!process.env.DIRECT_DATABASE_URL,
+    nodeEnv: process.env.NODE_ENV,
+    isVercel: !!process.env.VERCEL,
+    databaseUrl: process.env.DATABASE_URL?.substring(0, 50) + '...' || 'Not set'
   }))
   // Setup endpoint to create admin user
   .post('/setup-admin', async ({ set, body }) => {
@@ -187,7 +218,6 @@ const app = new Elysia({ prefix: "/api" })
   .get("/images/:bucket", async ({ params: { bucket }, set }) => {
     try {
       // Import the function directly here to bypass controller caching
-      const { prisma } = await import('./prisma/client');
       const images = await prisma.projectImage.findMany({
         where: { bucket },
         orderBy: [{ isFeatured: 'desc' }, { order: 'asc' }],

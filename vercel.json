@@ -9,5 +9,5 @@
       "maxDuration": 30
     }
   },
-  "installCommand": "npm install && cd src/backend && npm install && npm run db:generate && cd .. && cd .."
+  "installCommand": "npm install && cd src/backend && npm install && npx prisma generate && cd ../.."
 }
