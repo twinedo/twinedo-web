@@ -9,6 +9,7 @@ import { experienceController } from "./src/services/experience";
 import { projectController } from "./src/services/projects";
 import { projectImageController } from "./src/services/projectImages";
 import { authController } from "./src/services/auth";
+import { downloadController } from "./src/services/download";
 import { prisma } from "./prisma/client";
 
 const app = new Elysia({ prefix: "/api" })
@@ -62,6 +63,7 @@ const app = new Elysia({ prefix: "/api" })
     }
   })
   .use(experienceController)
+  .use(downloadController)  // Add download service BEFORE other controllers
   .use(cvController)           
   .use(projectController)      
   .use(projectImageController)
