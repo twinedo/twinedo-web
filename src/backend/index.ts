@@ -32,7 +32,6 @@ const app = new Elysia({ prefix: "/api" })
       console.log("Standalone CV download endpoint called");
       
       // Import dependencies directly to avoid controller conflicts
-      const { prisma } = await import('./prisma/client');
       const getConfig = (await import('next/config')).default;
       const { join } = await import('node:path');
       const { readFile } = await import('node:fs/promises');
@@ -44,12 +43,33 @@ const app = new Elysia({ prefix: "/api" })
       // Get CV data directly
       let cv;
       try {
-        cv = await prisma.cV.findFirst();
-        console.log("CV data:", cv);
+        // Try to get CV with blobUrl field
+        try {
+          cv = await prisma.$queryRaw`SELECT id, filename, "blobUrl", "createdAt", "updatedAt" FROM "CV" LIMIT 1`;
+          if (Array.isArray(cv) && cv.length > 0) {
+            cv = cv[0];
+          } else {
+            cv = null;
+          }
+        } catch (queryError) {
+          console.log("Failed to query with blobUrl, trying without...");
+          // Fallback to query without blobUrl field (for older schema)
+          cv = await prisma.$queryRaw`SELECT id, filename, "createdAt", "updatedAt" FROM "CV" LIMIT 1`;
+          if (Array.isArray(cv) && cv.length > 0) {
+            cv = cv[0];
+            // Add blobUrl as undefined to match expected structure
+            cv.blobUrl = undefined;
+          } else {
+            cv = null;
+          }
+        }
       } catch (dbError) {
         console.error("Database error:", dbError);
         set.status = 500;
         return { status: 500, message: "Database error" };
+      } finally {
+        // Disconnect the Prisma client to prevent connection leaks
+        await prisma.$disconnect();
       }
 
       if (!cv) {
