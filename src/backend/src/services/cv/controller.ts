@@ -10,6 +10,7 @@ import { jwtProps } from "../../utils/const";
 import bearer from "@elysiajs/bearer";
 import getConfig from "next/config";
 import { errorResponse } from "../../../../shared";
+import { put } from "@vercel/blob";
 
 const { CV_UPLOAD_DIR } = getConfig().serverRuntimeConfig;
 
@@ -53,27 +54,42 @@ export const cvController = baseCvController
       return errorResponse("No CV found", "", 404);
     }
 
+    // If CV has blobUrl, redirect to it
+    if (cv.blobUrl) {
+      set.headers = {
+        "Access-Control-Allow-Origin": baseUrl || "*",
+        "Access-Control-Allow-Methods": "GET",
+      };
+      set.status = 302;
+      set.headers.Location = cv.blobUrl;
+      return;
+    }
+
+    // Fallback to filesystem (for development or legacy)
     const filePath = join(CV_UPLOAD_DIR, cv.filename);
 
-    // Set headers for download
-    set.headers = {
-      "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="${cv.filename}"`,
-      "Access-Control-Allow-Origin": baseUrl || "*",
-      "Access-Control-Expose-Headers": "Content-Disposition",
-    };
+    try {
+      // Set headers for download
+      set.headers = {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `attachment; filename="${cv.filename}"`,
+        "Access-Control-Allow-Origin": baseUrl || "*",
+        "Access-Control-Expose-Headers": "Content-Disposition",
+      };
 
-    // Return the file
-    const fileBuffer = await readFile(filePath);
-    return new Response(new Uint8Array(fileBuffer));
+      // Return the file
+      const fileBuffer = await readFile(filePath);
+      return new Response(new Uint8Array(fileBuffer));
+    } catch (error) {
+      set.status = 404;
+      return errorResponse("CV file not found", "", 404);
+    }
   })
   .use(jwt(jwtProps))
   .use(bearer())
   .post(
     "/upload",
     async ({ body }) => {
-        await ensureUploadDir();
-
         const file = Array.isArray(body.cv_file)
           ? body.cv_file[0]
           : body.cv_file;
@@ -84,38 +100,35 @@ export const cvController = baseCvController
 
         // Constant filename
         const filename = "Twin Edo Nugraha - CV.pdf";
-        const filePath = join(CV_UPLOAD_DIR, filename);
 
-        // Delete existing file if it exists
-        try {
-          await access(filePath, constants.F_OK);
-          await unlink(filePath);
-        } catch {
-          console.log("No existing file to delete");
-        }
+        // Upload to Vercel Blob
+        const fileBuffer = await file.arrayBuffer();
+        const blob = await put(`cv/${filename}`, fileBuffer, {
+          access: 'public',
+          addRandomSuffix: false,
+        });
 
-        // Save new file
-        const arrayBuffer = await file.arrayBuffer();
-        await writeFile(filePath, Buffer.from(arrayBuffer));
-        const cv = await createOrUpdateCV(filename);
+        // Save to database with blob URL
+        const data = await createOrUpdateCV(filename, blob.url);
 
         return {
-          success: true,
-          message: "CV updated successfully",
-          cv,
-          url: `/cv/files/${filename}`,
-          downloadUrl: `/cv/download`,
+          status: 201,
+          message: "CV uploaded successfully",
+          data: {
+            ...data,
+            url: blob.url
+          },
         };
+    },
+    {
+      beforeHandle: adminMiddleware(),
+      body: t.Object({
+        cv_file: t.Any(),
+      }),
+      parse: async ({ request }) => {
+        const formData = await request.formData();
+        const cv_file = formData.get("cv_file");
+        return { cv_file };
       },
-      {
-        beforeHandle: adminMiddleware(),
-        body: t.Object({
-          cv_file: t.Any(),
-        }),
-        parse: async ({ request }) => {
-          const formData = await request.formData();
-          const cv_file = formData.get("cv_file");
-          return { cv_file };
-        },
-      }
-    );
+    }
+  );
