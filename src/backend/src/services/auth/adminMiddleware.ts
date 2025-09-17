@@ -8,7 +8,7 @@ type AdminContext = {
     sign: (payload: User) => Promise<string>;
   };
   set: {
-    status: number;
+    status?: number | string;
   } & Record<string, unknown>;
 } & Record<string, unknown>;
 
