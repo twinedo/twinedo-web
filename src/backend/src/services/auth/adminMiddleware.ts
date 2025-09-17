@@ -10,27 +10,18 @@ type AdminContext = {
     status?: number | string;
   } & Record<string, unknown>;
   request: Request;
-  headers?: Record<string, string | undefined>;
-  query?: Record<string, string | undefined>;
-  body?: unknown;
 } & Record<string, unknown>;
 
 const ADMIN_EMAIL = "twinedo.dev@gmail.com";
 
 export const adminMiddleware = () => {
   return async (context: AdminContext) => {
-    const { jwt, set, request, headers, query, body } = context;
+    const { jwt, set, request } = context;
 
-    const authHeader = headers?.authorization ?? headers?.Authorization ?? request.headers.get('authorization') ?? request.headers.get('Authorization');
-    const bodyBearer = typeof body === 'object' && body !== null && 'access_token' in body
-      ? (body as Record<string, unknown>).access_token
-      : undefined;
-    const queryBearer = query?.access_token;
+    const authHeader = request.headers.get('authorization') ?? request.headers.get('Authorization');
     const token = authHeader?.startsWith('Bearer ')
       ? authHeader.slice('Bearer '.length).trim()
-      : (typeof authHeader === 'string' && authHeader.length > 0
-          ? authHeader
-          : (typeof bodyBearer === 'string' ? bodyBearer : queryBearer));
+      : (typeof authHeader === 'string' && authHeader.length > 0 ? authHeader : undefined);
 
     if (!token) {
       set.status = 401;
@@ -50,6 +41,13 @@ export const adminMiddleware = () => {
 
     try {
       const user = await jwt.verify(token);
+      if (!user) {
+        set.status = 401;
+        return {
+          status: 401,
+          message: "Invalid token",
+        };
+      }
       const dataUser = user as User;
 
       // Restrict access to admin email only
@@ -71,12 +69,8 @@ export const adminMiddleware = () => {
       }
 
       // Return success response instead of user data directly
-      set.status = 200;
-      return {
-        status: 200,
-        message: "Admin access verified",
-        data: { admin: true },
-      };
+      Object.assign(context, { adminUser: dataUser });
+      return;
     } catch (error) {
       set.status = 401;
       return {
