@@ -86,7 +86,7 @@ const app = new Elysia({ prefix: "/api" })
   .use(cors())
   .get("/", () => ("Hello from Elysia!"))
   // Completely isolated CV download endpoint - no controller dependencies
-  .get("/download/cv", async ({ set }) => {
+  .get("/download/cv", async ({ set, request }) => {
     try {
       console.log("Standalone CV download endpoint called");
       
@@ -96,8 +96,9 @@ const app = new Elysia({ prefix: "/api" })
       const { readFile } = await import('node:fs/promises');
       
       const { CV_UPLOAD_DIR } = getConfig().serverRuntimeConfig;
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 
-        `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`;
+      const requestOrigin = request.headers.get('origin');
+      const allowedOrigin = requestOrigin ?? '*';
+      const varyHeader: Record<string, string> = requestOrigin ? { Vary: 'Origin' } : {};
 
       // Get CV data directly
       let cv;
@@ -134,8 +135,9 @@ const app = new Elysia({ prefix: "/api" })
       if (!cv) {
         set.status = 404;
         set.headers = {
-          "Access-Control-Allow-Origin": baseUrl || "*",
+          "Access-Control-Allow-Origin": allowedOrigin,
           "Access-Control-Allow-Methods": "GET",
+          ...varyHeader,
         };
         return { status: 404, message: "No CV found" };
       }
@@ -154,8 +156,9 @@ const app = new Elysia({ prefix: "/api" })
           set.headers = {
             "Content-Type": "application/pdf",
             "Content-Disposition": `attachment; filename="${cv.filename}"`,
-            "Access-Control-Allow-Origin": baseUrl || "*",
+            "Access-Control-Allow-Origin": allowedOrigin,
             "Access-Control-Expose-Headers": "Content-Disposition",
+            ...varyHeader,
           };
 
           return new Response(new Uint8Array(blobData));
@@ -176,8 +179,9 @@ const app = new Elysia({ prefix: "/api" })
         set.headers = {
           "Content-Type": "application/pdf",
           "Content-Disposition": `attachment; filename="${cv.filename}"`,
-          "Access-Control-Allow-Origin": baseUrl || "*",
+          "Access-Control-Allow-Origin": allowedOrigin,
           "Access-Control-Expose-Headers": "Content-Disposition",
+          ...varyHeader,
         };
 
         return new Response(new Uint8Array(fileBuffer));

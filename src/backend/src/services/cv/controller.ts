@@ -12,9 +12,6 @@ import { put } from "@vercel/blob";
 
 const { CV_UPLOAD_DIR } = getConfig().serverRuntimeConfig;
 
-export const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 
-  `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`;
-
 // Ensure upload directory exists - wrapped in async function
 const ensureUploadDir = async () => {
   await mkdir(CV_UPLOAD_DIR, { recursive: true });
@@ -42,13 +39,17 @@ export const cvController = baseCvController
     const cv = await getCV();
     return { cv };
   })
-  .get("/download", async ({ set }) => {
+  .get("/download", async ({ set, request }) => {
+    const requestOrigin = request.headers.get('origin');
+    const allowedOrigin = requestOrigin ?? '*';
+    const varyHeader: Record<string, string> = requestOrigin ? { Vary: 'Origin' } : {};
     const cv = await getCV();
 
     if (!cv) {
       set.headers = {
-        "Access-Control-Allow-Origin": baseUrl || "*",
+        "Access-Control-Allow-Origin": allowedOrigin,
         "Access-Control-Allow-Methods": "GET",
+        ...varyHeader,
       };
       set.status = 404;
       return {
@@ -70,8 +71,9 @@ export const cvController = baseCvController
         set.headers = {
           "Content-Type": "application/pdf",
           "Content-Disposition": `attachment; filename="${cv.filename}"`,
-          "Access-Control-Allow-Origin": baseUrl || "*",
+          "Access-Control-Allow-Origin": allowedOrigin,
           "Access-Control-Expose-Headers": "Content-Disposition",
+          ...varyHeader,
         };
 
         return new Response(new Uint8Array(blobData));
@@ -89,14 +91,20 @@ export const cvController = baseCvController
       set.headers = {
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="${cv.filename}"`,
-        "Access-Control-Allow-Origin": baseUrl || "*",
+        "Access-Control-Allow-Origin": allowedOrigin,
         "Access-Control-Expose-Headers": "Content-Disposition",
+        ...varyHeader,
       };
-
+      
       // Return the file
       const fileBuffer = await readFile(filePath);
       return new Response(new Uint8Array(fileBuffer));
-    } catch (error) {
+    } catch (_error) {
+      set.headers = {
+        "Access-Control-Allow-Origin": allowedOrigin,
+        "Access-Control-Allow-Methods": "GET",
+        ...varyHeader,
+      };
       set.status = 404;
       return {
         status: 404,
