@@ -2,7 +2,6 @@ import { Elysia, t } from "elysia";
 import { loginUser } from "./model";
 import jwt from "@elysiajs/jwt";
 import { jwtProps } from "../../utils/const";
-import bearer from "@elysiajs/bearer";
 import { adminMiddleware } from "./adminMiddleware";
 
 export const authController = new Elysia({ prefix: "/auth" })
@@ -77,7 +76,6 @@ export const authController = new Elysia({ prefix: "/auth" })
   .group("/admin", (app) => 
     app
       .use(jwt(jwtProps))
-      .use(bearer())
       .get(
         "/verify",
         async ({ set }) => {

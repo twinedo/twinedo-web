@@ -2,7 +2,6 @@ import { Elysia, t } from "elysia";
 import { getProjectImages, createProjectImage, updateProjectImage, deleteProjectImage } from "./model";
 import { prisma } from "../../../prisma/client";
 import jwt from "@elysiajs/jwt";
-import bearer from "@elysiajs/bearer";
 import { jwtProps } from "../../utils/const";
 import { adminMiddleware } from "../auth/adminMiddleware";
 
@@ -69,7 +68,6 @@ export const projectImageController = new Elysia({ prefix: "/project-images" })
   )
   // Protected routes for admin
   .use(jwt(jwtProps))
-  .use(bearer())
   .post(
     "/upload",
     async ({ body, set }) => {

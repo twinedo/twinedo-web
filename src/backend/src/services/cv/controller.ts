@@ -6,7 +6,6 @@ import { join } from "node:path";
 import { adminMiddleware } from "../auth/adminMiddleware";
 import jwt from "@elysiajs/jwt";
 import { jwtProps } from "../../utils/const";
-import bearer from "@elysiajs/bearer";
 import getConfig from "next/config";
 import { put } from "@vercel/blob";
 
@@ -116,7 +115,6 @@ export const cvController = baseCvController
   .group("/", (app) => 
     app
       .use(jwt(jwtProps))
-      .use(bearer())
       .post(
         "/upload",
         async ({ body }) => {

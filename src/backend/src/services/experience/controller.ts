@@ -5,7 +5,6 @@ import {
   successResponse,
 } from "../../../../shared";
 import jwt from "@elysiajs/jwt";
-import bearer from "@elysiajs/bearer";
 import { jwtProps } from "../../utils/const";
 import { adminMiddleware } from "../auth/adminMiddleware";
 
@@ -65,7 +64,6 @@ export const experienceController = new Elysia({ prefix: "/experience" })
   })
   // Protected routes for admin
   .use(jwt(jwtProps))
-  .use(bearer())
   .post(
     "/",
     async ({ body, set }) => {

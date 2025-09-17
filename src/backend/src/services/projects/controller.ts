@@ -12,7 +12,6 @@ import { prisma } from "../../../prisma/client";
 import { adminMiddleware } from "../auth/adminMiddleware";
 import jwt from "@elysiajs/jwt";
 import { jwtProps } from "../../utils/const";
-import bearer from "@elysiajs/bearer";
 import getConfig from "next/config";
 
 const { PROJECTS_UPLOAD_DIR } = getConfig().serverRuntimeConfig;
@@ -30,7 +29,6 @@ if (process.env.NODE_ENV !== 'production' && PROJECTS_UPLOAD_DIR) {
 
 export const projectController = baseProjectController
   .use(jwt(jwtProps))
-  .use(bearer())
   .post(
     "/",
     async ({ body, set }) => {

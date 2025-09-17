@@ -2,7 +2,6 @@ import type { JWTPayloadSpec } from "@elysiajs/jwt";
 import type { User } from "./types";
 
 type AdminContext = {
-  bearer?: string;
   jwt?: {
     verify: (token: string) => Promise<JWTPayloadSpec>;
     sign: (payload: User) => Promise<string>;
@@ -10,15 +9,30 @@ type AdminContext = {
   set: {
     status?: number | string;
   } & Record<string, unknown>;
+  request: Request;
+  headers?: Record<string, string | undefined>;
+  query?: Record<string, string | undefined>;
+  body?: unknown;
 } & Record<string, unknown>;
 
 const ADMIN_EMAIL = "twinedo.dev@gmail.com";
 
 export const adminMiddleware = () => {
   return async (context: AdminContext) => {
-    const { bearer, jwt, set } = context;
+    const { jwt, set, request, headers, query, body } = context;
 
-    if (!bearer) {
+    const authHeader = headers?.authorization ?? headers?.Authorization ?? request.headers.get('authorization') ?? request.headers.get('Authorization');
+    const bodyBearer = typeof body === 'object' && body !== null && 'access_token' in body
+      ? (body as Record<string, unknown>).access_token
+      : undefined;
+    const queryBearer = query?.access_token;
+    const token = authHeader?.startsWith('Bearer ')
+      ? authHeader.slice('Bearer '.length).trim()
+      : (typeof authHeader === 'string' && authHeader.length > 0
+          ? authHeader
+          : (typeof bodyBearer === 'string' ? bodyBearer : queryBearer));
+
+    if (!token) {
       set.status = 401;
       return {
         status: 401,
@@ -35,7 +49,7 @@ export const adminMiddleware = () => {
     }
 
     try {
-      const user = await jwt.verify(bearer);
+      const user = await jwt.verify(token);
       const dataUser = user as User;
 
       // Restrict access to admin email only
