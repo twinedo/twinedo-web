@@ -277,6 +277,8 @@ export const POST = app.handle as any;
 export const PATCH = app.handle as any;
 export const DELETE = app.handle as any;
 export const PUT = app.handle as any;
+export const OPTIONS = app.handle as any;
+export const HEAD = app.handle as any;
 
 export default app;
 export type App = typeof app;
