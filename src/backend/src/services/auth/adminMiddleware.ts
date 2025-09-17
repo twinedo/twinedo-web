@@ -1,24 +1,36 @@
-import { type Context } from "elysia";
-import { type JWTPayloadSpec } from "@elysiajs/jwt";
+import type { JWTPayloadSpec } from "@elysiajs/jwt";
 import type { User } from "./types";
 
-type AdminContext = Context & {
+type AdminContext = {
   bearer?: string;
-  jwt: {
+  jwt?: {
     verify: (token: string) => Promise<JWTPayloadSpec>;
     sign: (payload: User) => Promise<string>;
   };
-};
+  set: {
+    status: number;
+  } & Record<string, unknown>;
+} & Record<string, unknown>;
 
 const ADMIN_EMAIL = "twinedo.dev@gmail.com";
 
 export const adminMiddleware = () => {
-  return async ({ bearer, jwt, set }: AdminContext) => {
+  return async (context: AdminContext) => {
+    const { bearer, jwt, set } = context;
+
     if (!bearer) {
       set.status = 401;
       return {
         status: 401,
         message: "Authentication required",
+      };
+    }
+
+    if (!jwt) {
+      set.status = 500;
+      return {
+        status: 500,
+        message: "JWT verification is not configured",
       };
     }
 
