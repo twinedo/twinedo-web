@@ -77,16 +77,32 @@ export default function CVManagement() {
         body: formData,
       });
 
+      const payload = await response.json().catch(() => null);
+
       if (response.ok) {
-        await fetchCV(); // Refresh CV data
+        if (payload?.data) {
+          const normalized = {
+            id: payload.data.id,
+            filename: payload.data.filename,
+            createdAt: payload.data.createdAt
+              ? new Date(payload.data.createdAt).toISOString()
+              : new Date().toISOString(),
+            updatedAt: payload.data.updatedAt
+              ? new Date(payload.data.updatedAt).toISOString()
+              : new Date().toISOString(),
+          } satisfies CV;
+          setCV(normalized);
+        } else {
+          await fetchCV();
+        }
         setSelectedFile(null);
         // Reset file input
         const fileInput = document.getElementById('cv-file') as HTMLInputElement;
         if (fileInput) fileInput.value = '';
         alert('CV uploaded successfully!');
       } else {
-        const error = await response.json();
-        alert(`Upload failed: ${error.message || 'Something went wrong'}`);
+        const message = payload?.message || 'Something went wrong';
+        alert(`Upload failed: ${message}`);
       }
     } catch (error) {
       alert('Upload failed. Please try again.');

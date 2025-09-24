@@ -74,16 +74,42 @@ export const cvController = baseCvController
             "Content-Disposition": `attachment; filename="${cv.filename}"`,
             "Access-Control-Allow-Origin": allowedOrigin,
             "Access-Control-Expose-Headers": "Content-Disposition",
+            "Cache-Control": "no-store",
             ...varyHeader,
           },
         });
-      } catch {
-        console.error('Error fetching blob:');
-        // Fall through to filesystem fallback
+      } catch (error) {
+        console.error('Error fetching blob:', error);
+        if (!allowFilesystemFallback) {
+          set.headers = {
+            "Access-Control-Allow-Origin": allowedOrigin,
+            "Access-Control-Allow-Methods": "GET",
+            ...varyHeader,
+          };
+          set.status = 502;
+          return {
+            status: 502,
+            message: "CV file is temporarily unavailable. Please try again shortly.",
+          };
+        }
+        // Fall through to filesystem fallback when allowed
       }
     }
 
     // Fallback to filesystem (for development or legacy)
+    if (!allowFilesystemFallback) {
+      set.headers = {
+        "Access-Control-Allow-Origin": allowedOrigin,
+        "Access-Control-Allow-Methods": "GET",
+        ...varyHeader,
+      };
+      set.status = 404;
+      return {
+        status: 404,
+        message: "CV file not found",
+      };
+    }
+
     const filePath = join(CV_UPLOAD_DIR, cv.filename);
 
     try {
@@ -95,6 +121,7 @@ export const cvController = baseCvController
           "Content-Disposition": `attachment; filename="${cv.filename}"`,
           "Access-Control-Allow-Origin": allowedOrigin,
           "Access-Control-Expose-Headers": "Content-Disposition",
+          "Cache-Control": "no-store",
           ...varyHeader,
         },
       });

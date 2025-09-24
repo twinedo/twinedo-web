@@ -91,6 +91,7 @@ const app = new Elysia({ prefix: "/api" })
   // Completely isolated CV download endpoint - no controller dependencies
   .get("/download/cv", async ({ set, request }) => {
     const CV_UPLOAD_DIR = resolveCVUploadDir();
+    const allowFilesystemFallback = !process.env.VERCEL && process.env.NODE_ENV !== 'production';
     const requestOrigin = request.headers.get('origin');
     const allowedOrigin = requestOrigin ?? '*';
     const varyHeader: Record<string, string> = requestOrigin ? { Vary: 'Origin' } : {};
@@ -101,33 +102,16 @@ const app = new Elysia({ prefix: "/api" })
       // Get CV data directly
       let cv;
       try {
-        // Try to get CV with blobUrl field
-        try {
-          cv = await prisma.$queryRaw`SELECT id, filename, "blobUrl", "createdAt", "updatedAt" FROM "CV" LIMIT 1`;
-          if (Array.isArray(cv) && cv.length > 0) {
-            cv = cv[0];
-          } else {
-            cv = null;
-          }
-        } catch {
-          console.log("Failed to query with blobUrl, trying without...");
-          // Fallback to query without blobUrl field (for older schema)
-          cv = await prisma.$queryRaw`SELECT id, filename, "createdAt", "updatedAt" FROM "CV" LIMIT 1`;
-          if (Array.isArray(cv) && cv.length > 0) {
-            cv = cv[0];
-            // Add blobUrl as undefined to match expected structure
-            cv.blobUrl = undefined;
-          } else {
-            cv = null;
-          }
-        }
+        cv = await prisma.cV.findFirst();
       } catch (dbError) {
         console.error("Database error:", dbError);
+        set.headers = {
+          "Access-Control-Allow-Origin": allowedOrigin,
+          "Access-Control-Allow-Methods": "GET",
+          ...varyHeader,
+        };
         set.status = 500;
         return { status: 500, message: "Database error" };
-      } finally {
-        // Disconnect the Prisma client to prevent connection leaks
-        await prisma.$disconnect();
       }
 
       if (!cv) {
@@ -156,16 +140,36 @@ const app = new Elysia({ prefix: "/api" })
               "Content-Disposition": `attachment; filename="${cv.filename}"`,
               "Access-Control-Allow-Origin": allowedOrigin,
               "Access-Control-Expose-Headers": "Content-Disposition",
+              "Cache-Control": "no-store",
               ...varyHeader,
             },
           });
         } catch (blobError) {
           console.error('Error fetching blob:', blobError);
-          // Fall through to filesystem fallback
+          if (!allowFilesystemFallback) {
+            set.headers = {
+              "Access-Control-Allow-Origin": allowedOrigin,
+              "Access-Control-Allow-Methods": "GET",
+              ...varyHeader,
+            };
+            set.status = 502;
+            return { status: 502, message: "CV file is temporarily unavailable. Please try again." };
+          }
+          // Fall through to filesystem fallback when allowed
         }
       }
 
       // Fallback to filesystem
+      if (!allowFilesystemFallback) {
+        set.headers = {
+          "Access-Control-Allow-Origin": allowedOrigin,
+          "Access-Control-Allow-Methods": "GET",
+          ...varyHeader,
+        };
+        set.status = 404;
+        return { status: 404, message: "CV file not found" };
+      }
+
       console.log("Using filesystem fallback");
       const filePath = join(CV_UPLOAD_DIR, cv.filename);
       console.log("File path:", filePath);
@@ -179,6 +183,7 @@ const app = new Elysia({ prefix: "/api" })
             "Content-Disposition": `attachment; filename="${cv.filename}"`,
             "Access-Control-Allow-Origin": allowedOrigin,
             "Access-Control-Expose-Headers": "Content-Disposition",
+            "Cache-Control": "no-store",
             ...varyHeader,
           },
         });
