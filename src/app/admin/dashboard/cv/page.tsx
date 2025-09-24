@@ -80,21 +80,7 @@ export default function CVManagement() {
       const payload = await response.json().catch(() => null);
 
       if (response.ok) {
-        if (payload?.data) {
-          const normalized = {
-            id: payload.data.id,
-            filename: payload.data.filename,
-            createdAt: payload.data.createdAt
-              ? new Date(payload.data.createdAt).toISOString()
-              : new Date().toISOString(),
-            updatedAt: payload.data.updatedAt
-              ? new Date(payload.data.updatedAt).toISOString()
-              : new Date().toISOString(),
-          } satisfies CV;
-          setCV(normalized);
-        } else {
-          await fetchCV();
-        }
+        await fetchCV();
         setSelectedFile(null);
         // Reset file input
         const fileInput = document.getElementById('cv-file') as HTMLInputElement;
