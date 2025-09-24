@@ -30,8 +30,10 @@ type PrismaClientInstance = ReturnType<typeof createPrisma>;
 // Keep a singleton in dev
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClientInstance };
 
-export const prisma: PrismaClientInstance = globalForPrisma.prisma ?? createPrisma();
+const prismaInstance = globalForPrisma.prisma ?? createPrisma();
 
 if (process.env.NODE_ENV !== 'production') {
-  globalForPrisma.prisma = prisma;
+  globalForPrisma.prisma = prismaInstance;
 }
+
+export const prisma = prismaInstance as unknown as PrismaClient;
