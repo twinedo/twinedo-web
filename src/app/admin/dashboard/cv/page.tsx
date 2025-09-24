@@ -4,6 +4,7 @@ import { useRequireAdmin } from '../../hooks/useAdminAuth';
 import { AdminLayout } from '../../components/AdminLayout';
 import { useState, useEffect } from 'react';
 import { useAdminAuth } from '../../hooks/useAdminAuth';
+import { downloadCV } from '@/services/cv';
 
 interface CV {
   id: string;
@@ -22,16 +23,18 @@ export default function CVManagement() {
 
   const fetchCV = async () => {
     try {
-      const response = await fetch('/api/cv');
+      const response = await fetch('/api/cv', { cache: 'no-store' });
       if (response.ok) {
         const data = await response.json();
         setCV(data.cv);
+        return data.cv;
       }
     } catch (error) {
       console.error('Error fetching CV:', error);
     } finally {
       setIsLoading(false);
     }
+    return null;
   };
 
   useEffect(() => {
@@ -75,7 +78,7 @@ export default function CVManagement() {
       });
 
       if (response.ok) {
-        fetchCV(); // Refresh CV data
+        await fetchCV(); // Refresh CV data
         setSelectedFile(null);
         // Reset file input
         const fileInput = document.getElementById('cv-file') as HTMLInputElement;
@@ -93,8 +96,13 @@ export default function CVManagement() {
     }
   };
 
-  const handleDownload = () => {
-    window.open('/api/cv/download', '_blank');
+  const handleDownload = async () => {
+    try {
+      await downloadCV();
+    } catch (error) {
+      alert('Download failed. Please try again.');
+      console.error('Download error:', error);
+    }
   };
 
   const formatFileSize = (bytes: number) => {

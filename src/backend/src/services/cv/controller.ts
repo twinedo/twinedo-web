@@ -10,7 +10,7 @@ import { put } from "@vercel/blob";
 import { resolveCVUploadDir } from "../../utils/paths";
 
 const CV_UPLOAD_DIR = resolveCVUploadDir();
-const hasBlobWriteAccess = Boolean(process.env.BLOB_READ_WRITE_TOKEN);
+const allowFilesystemFallback = !process.env.VERCEL && process.env.NODE_ENV !== 'production';
 
 // Ensure upload directory exists - wrapped in async function
 const ensureUploadDir = async () => {
@@ -129,21 +129,21 @@ export const cvController = baseCvController
         const fileBuffer = Buffer.from(arrayBuffer);
         let blobUrl: string | undefined;
 
-        if (hasBlobWriteAccess) {
-          try {
-            const blob = await put(`cv/${filename}`, fileBuffer, {
-              access: 'public',
-              addRandomSuffix: false,
-            });
-            blobUrl = blob.url;
-          } catch (error) {
-            console.error('Upload to Vercel Blob failed:', error);
-          }
-        } else {
-          console.warn('BLOB_READ_WRITE_TOKEN is not configured; falling back to filesystem storage.');
+        try {
+          const blob = await put(`cv/${filename}`, fileBuffer, {
+            access: 'public',
+            addRandomSuffix: false,
+          });
+          blobUrl = blob.url;
+        } catch (error) {
+          console.error('Upload to Vercel Blob failed:', error);
         }
 
         if (!blobUrl) {
+          if (!allowFilesystemFallback) {
+            throw new Error('Unable to store CV. Blob storage is not configured.');
+          }
+
           try {
             await ensureUploadDir();
             const filePath = join(CV_UPLOAD_DIR, filename);
