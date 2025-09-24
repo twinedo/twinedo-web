@@ -34,13 +34,8 @@ if (process.env.NODE_ENV === 'development' && !process.env.VERCEL && CV_UPLOAD_D
 }
 
 export const cvController = baseCvController
-  .use(jwt(jwtProps))
   // Public routes - no authentication required
-  .get("/", async () => {
-    const cv = await getCV();
-    return { cv };
-  })
-  .get("/download", async ({ set, request }) => {
+  .get("/", async ({ set, request }) => {
     const requestOrigin = request.headers.get('origin');
     const allowedOrigin = requestOrigin ?? '*';
     const varyHeader: Record<string, string> = requestOrigin ? { Vary: 'Origin' } : {};
@@ -55,11 +50,10 @@ export const cvController = baseCvController
       set.status = 404;
       return {
         status: 404,
-        message: "No CV found"
+        message: "No CV found",
       };
     }
 
-    // If CV has blobUrl, fetch and serve it
     if (cv && 'blobUrl' in cv && cv.blobUrl && typeof cv.blobUrl === 'string') {
       try {
         const blobResponse = await fetch(cv.blobUrl);
@@ -96,7 +90,6 @@ export const cvController = baseCvController
       }
     }
 
-    // Fallback to filesystem (for development or legacy)
     if (!allowFilesystemFallback) {
       set.headers = {
         "Access-Control-Allow-Origin": allowedOrigin,
@@ -113,7 +106,6 @@ export const cvController = baseCvController
     const filePath = join(CV_UPLOAD_DIR, cv.filename);
 
     try {
-      // Set headers for download
       const fileBuffer = await readFile(filePath);
       return new Response(new Uint8Array(fileBuffer), {
         headers: {
@@ -134,9 +126,23 @@ export const cvController = baseCvController
       set.status = 404;
       return {
         status: 404,
-        message: "CV file not found"
+        message: "CV file not found",
       };
     }
+  })
+  .use(jwt(jwtProps))
+  // Public routes - redirect download path
+  .get("/download", async ({ set, request }) => {
+    const origin = request.headers.get('origin');
+    const allowedOrigin = origin ?? '*';
+    const varyHeader: Record<string, string> = origin ? { Vary: 'Origin' } : {};
+    set.headers = {
+      "Access-Control-Allow-Origin": allowedOrigin,
+      "Access-Control-Allow-Methods": "GET",
+      ...varyHeader,
+    };
+    set.status = 301;
+    return Response.redirect(new URL('/api/cv', request.url), 301);
   })
   // Protected routes - authentication required (JWT middleware applied here)
   .post(

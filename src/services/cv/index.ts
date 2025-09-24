@@ -1,7 +1,7 @@
 import type { ApiErrorResponse } from "@/shared";
 
 export const downloadCV = async () => {
-  const response = await fetch(`/api/download/cv`, { cache: 'no-store' });
+  const response = await fetch(`/api/cv`, { cache: 'no-store' });
 
   if (!response.ok) {
     const errorData: ApiErrorResponse = await response.json().catch(() => ({
