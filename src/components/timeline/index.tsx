@@ -27,7 +27,10 @@ export function Timeline(props: IProps) {
           md:mb-0
           w-full
         ">
-          <div className="p-4 sm:p-6 rounded-xl sm:rounded-2xl bg-white/10 backdrop-blur-xl border border-white/20 shadow-lg hover:bg-white/15 transition-all duration-300">
+          <div
+            className="p-4 sm:p-6 rounded-xl sm:rounded-2xl backdrop-blur-xl border border-white/20 shadow-lg hover:bg-white/15 transition-all duration-300"
+            style={{ backgroundColor: bgCard }}
+          >
             {children}
           </div>
         </div>

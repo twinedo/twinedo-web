@@ -90,12 +90,13 @@ const app = new Elysia({ prefix: "/api" })
   .get("/", () => ("Hello from Elysia!"))
   // Completely isolated CV download endpoint - no controller dependencies
   .get("/download/cv", async ({ set, request }) => {
+    const CV_UPLOAD_DIR = resolveCVUploadDir();
+    const requestOrigin = request.headers.get('origin');
+    const allowedOrigin = requestOrigin ?? '*';
+    const varyHeader: Record<string, string> = requestOrigin ? { Vary: 'Origin' } : {};
+
     try {
       console.log("Standalone CV download endpoint called");
-      const CV_UPLOAD_DIR = resolveCVUploadDir();
-      const requestOrigin = request.headers.get('origin');
-      const allowedOrigin = requestOrigin ?? '*';
-      const varyHeader: Record<string, string> = requestOrigin ? { Vary: 'Origin' } : {};
 
       // Get CV data directly
       let cv;
