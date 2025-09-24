@@ -11,6 +11,9 @@ import { projectImageController } from "./src/services/projectImages";
 import { authController } from "./src/services/auth";
 import bcrypt from "bcryptjs";
 import { prisma } from './prisma/client';
+import { join } from "node:path";
+import { readFile } from "node:fs/promises";
+import { resolveCVUploadDir } from "./src/utils/paths";
 
 const app = new Elysia({ prefix: "/api" })
   .get('/health', () => ({ ok: true }))
@@ -89,13 +92,7 @@ const app = new Elysia({ prefix: "/api" })
   .get("/download/cv", async ({ set, request }) => {
     try {
       console.log("Standalone CV download endpoint called");
-      
-      // Import dependencies directly to avoid controller conflicts
-      const getConfig = (await import('next/config')).default;
-      const { join } = await import('node:path');
-      const { readFile } = await import('node:fs/promises');
-      
-      const { CV_UPLOAD_DIR } = getConfig().serverRuntimeConfig;
+      const CV_UPLOAD_DIR = resolveCVUploadDir();
       const requestOrigin = request.headers.get('origin');
       const allowedOrigin = requestOrigin ?? '*';
       const varyHeader: Record<string, string> = requestOrigin ? { Vary: 'Origin' } : {};
@@ -152,16 +149,15 @@ const app = new Elysia({ prefix: "/api" })
           }
 
           const blobData = await blobResponse.arrayBuffer();
-          
-          set.headers = {
-            "Content-Type": "application/pdf",
-            "Content-Disposition": `attachment; filename="${cv.filename}"`,
-            "Access-Control-Allow-Origin": allowedOrigin,
-            "Access-Control-Expose-Headers": "Content-Disposition",
-            ...varyHeader,
-          };
-
-          return new Response(new Uint8Array(blobData));
+          return new Response(new Uint8Array(blobData), {
+            headers: {
+              "Content-Type": "application/pdf",
+              "Content-Disposition": `attachment; filename="${cv.filename}"`,
+              "Access-Control-Allow-Origin": allowedOrigin,
+              "Access-Control-Expose-Headers": "Content-Disposition",
+              ...varyHeader,
+            },
+          });
         } catch (blobError) {
           console.error('Error fetching blob:', blobError);
           // Fall through to filesystem fallback
@@ -175,23 +171,33 @@ const app = new Elysia({ prefix: "/api" })
 
       try {
         const fileBuffer = await readFile(filePath);
-        
-        set.headers = {
-          "Content-Type": "application/pdf",
-          "Content-Disposition": `attachment; filename="${cv.filename}"`,
-          "Access-Control-Allow-Origin": allowedOrigin,
-          "Access-Control-Expose-Headers": "Content-Disposition",
-          ...varyHeader,
-        };
 
-        return new Response(new Uint8Array(fileBuffer));
+        return new Response(new Uint8Array(fileBuffer), {
+          headers: {
+            "Content-Type": "application/pdf",
+            "Content-Disposition": `attachment; filename="${cv.filename}"`,
+            "Access-Control-Allow-Origin": allowedOrigin,
+            "Access-Control-Expose-Headers": "Content-Disposition",
+            ...varyHeader,
+          },
+        });
       } catch (fileError) {
         console.error('Error reading file:', fileError);
+        set.headers = {
+          "Access-Control-Allow-Origin": allowedOrigin,
+          "Access-Control-Allow-Methods": "GET",
+          ...varyHeader,
+        };
         set.status = 404;
         return { status: 404, message: "CV file not found" };
       }
     } catch (error) {
       console.error('Download CV error:', error);
+      set.headers = {
+        "Access-Control-Allow-Origin": allowedOrigin,
+        "Access-Control-Allow-Methods": "GET",
+        ...varyHeader,
+      };
       set.status = 500;
       return { status: 500, message: "Internal server error" };
     }

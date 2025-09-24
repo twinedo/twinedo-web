@@ -1,15 +1,16 @@
 import { Elysia, t } from "elysia";
 import { createOrUpdateCV, getCV } from "./model";
 import { staticPlugin } from "@elysiajs/static";
-import { mkdir, readFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { adminMiddleware } from "../auth/adminMiddleware";
 import jwt from "@elysiajs/jwt";
 import { jwtProps } from "../../utils/const";
-import getConfig from "next/config";
 import { put } from "@vercel/blob";
+import { resolveCVUploadDir } from "../../utils/paths";
 
-const { CV_UPLOAD_DIR } = getConfig().serverRuntimeConfig;
+const CV_UPLOAD_DIR = resolveCVUploadDir();
+const hasBlobWriteAccess = Boolean(process.env.BLOB_READ_WRITE_TOKEN);
 
 // Ensure upload directory exists - wrapped in async function
 const ensureUploadDir = async () => {
@@ -33,6 +34,7 @@ if (process.env.NODE_ENV === 'development' && !process.env.VERCEL && CV_UPLOAD_D
 }
 
 export const cvController = baseCvController
+  .use(jwt(jwtProps))
   // Public routes - no authentication required
   .get("/", async () => {
     const cv = await getCV();
@@ -66,16 +68,15 @@ export const cvController = baseCvController
         }
 
         const blobData = await blobResponse.arrayBuffer();
-        
-        set.headers = {
-          "Content-Type": "application/pdf",
-          "Content-Disposition": `attachment; filename="${cv.filename}"`,
-          "Access-Control-Allow-Origin": allowedOrigin,
-          "Access-Control-Expose-Headers": "Content-Disposition",
-          ...varyHeader,
-        };
-
-        return new Response(new Uint8Array(blobData));
+        return new Response(new Uint8Array(blobData), {
+          headers: {
+            "Content-Type": "application/pdf",
+            "Content-Disposition": `attachment; filename="${cv.filename}"`,
+            "Access-Control-Allow-Origin": allowedOrigin,
+            "Access-Control-Expose-Headers": "Content-Disposition",
+            ...varyHeader,
+          },
+        });
       } catch {
         console.error('Error fetching blob:');
         // Fall through to filesystem fallback
@@ -87,18 +88,17 @@ export const cvController = baseCvController
 
     try {
       // Set headers for download
-      set.headers = {
-        "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="${cv.filename}"`,
-        "Access-Control-Allow-Origin": allowedOrigin,
-        "Access-Control-Expose-Headers": "Content-Disposition",
-        ...varyHeader,
-      };
-      
-      // Return the file
       const fileBuffer = await readFile(filePath);
-      return new Response(new Uint8Array(fileBuffer));
-    } catch (_error) {
+      return new Response(new Uint8Array(fileBuffer), {
+        headers: {
+          "Content-Type": "application/pdf",
+          "Content-Disposition": `attachment; filename="${cv.filename}"`,
+          "Access-Control-Allow-Origin": allowedOrigin,
+          "Access-Control-Expose-Headers": "Content-Disposition",
+          ...varyHeader,
+        },
+      });
+    } catch {
       set.headers = {
         "Access-Control-Allow-Origin": allowedOrigin,
         "Access-Control-Allow-Methods": "GET",
@@ -112,52 +112,75 @@ export const cvController = baseCvController
     }
   })
   // Protected routes - authentication required (JWT middleware applied here)
-  .group("/", (app) => 
-    app
-      .use(jwt(jwtProps))
-      .post(
-        "/upload",
-        async ({ body }) => {
-            const file = Array.isArray(body.cv_file)
-              ? body.cv_file[0]
-              : body.cv_file;
+  .post(
+    "/upload",
+    async ({ body }) => {
+        const file = Array.isArray(body.cv_file)
+          ? body.cv_file[0]
+          : body.cv_file;
 
-            if (!file) throw new Error("No file uploaded");
-            if (file.type !== "application/pdf")
-              throw new Error("Only PDF files allowed");
+        if (!file) throw new Error("No file uploaded");
+        if (file.type !== "application/pdf")
+          throw new Error("Only PDF files allowed");
 
-            // Constant filename
-            const filename = "Twin Edo Nugraha - CV.pdf";
+        // Constant filename
+        const filename = "Twin Edo Nugraha - CV.pdf";
+        const arrayBuffer = await file.arrayBuffer();
+        const fileBuffer = Buffer.from(arrayBuffer);
+        let blobUrl: string | undefined;
 
-            // Upload to Vercel Blob
-            const fileBuffer = await file.arrayBuffer();
+        if (hasBlobWriteAccess) {
+          try {
             const blob = await put(`cv/${filename}`, fileBuffer, {
               access: 'public',
               addRandomSuffix: false,
             });
-
-            // Save to database with blob URL
-            const data = await createOrUpdateCV(filename, blob.url);
-
-            return {
-              status: 201,
-              message: "CV uploaded successfully",
-              data: {
-                ...data,
-                url: blob.url
-              },
-            };
-        },
-        {
-          beforeHandle: adminMiddleware(),
-          body: t.Object({
-            cv_file: t.Any(),
-          }),
-          parse: async ({ request }) => {
-            const formData = await request.formData();
-            const cv_file = formData.get("cv_file");
-            return { cv_file };
-          },
+            blobUrl = blob.url;
+          } catch (error) {
+            console.error('Upload to Vercel Blob failed:', error);
+          }
+        } else {
+          console.warn('BLOB_READ_WRITE_TOKEN is not configured; falling back to filesystem storage.');
         }
-      )
+
+        if (!blobUrl) {
+          try {
+            await ensureUploadDir();
+            const filePath = join(CV_UPLOAD_DIR, filename);
+            await writeFile(filePath, fileBuffer);
+          } catch (error) {
+            console.error('Failed to persist CV on filesystem:', error);
+            throw new Error('CV upload failed. Please try again later.');
+          }
+        }
+
+        // Save to database with blob URL (or without if filesystem fallback)
+        const data = await createOrUpdateCV(filename, blobUrl);
+        const storage = blobUrl ? 'blob' : 'filesystem';
+
+        return {
+          status: 201,
+          message: "CV uploaded successfully",
+          data: {
+            ...data,
+            url: blobUrl,
+            storage,
+          },
+        };
+    },
+    {
+      beforeHandle: adminMiddleware(),
+      body: t.Object({
+        cv_file: t.Any(),
+      }),
+      parse: async ({ request }) => {
+        const formData = await request.formData();
+        const cv_file = formData.get("cv_file");
+        return { cv_file };
+      },
+    }
   );
+
+if (process.env.NODE_ENV !== 'production' && Array.isArray(cvController.routes)) {
+  console.log('[CVController] registered routes:', cvController.routes.map((route) => `${route.method} ${route.path}`).join(', '));
+}
