@@ -39,6 +39,52 @@ export const cvController = baseCvController
     const requestOrigin = request.headers.get('origin');
     const allowedOrigin = requestOrigin ?? '*';
     const varyHeader: Record<string, string> = requestOrigin ? { Vary: 'Origin' } : {};
+
+    try {
+      const cv = await getCV();
+
+      set.headers = {
+        "Access-Control-Allow-Origin": allowedOrigin,
+        "Access-Control-Allow-Methods": "GET",
+        ...varyHeader,
+      };
+
+      if (!cv) {
+        set.status = 404;
+        return {
+          status: 404,
+          message: "No CV found",
+        };
+      }
+
+      const downloadUrl = cv.blobUrl ?? (allowFilesystemFallback ? '/api/cv/file' : null);
+
+      return {
+        status: 200,
+        message: "CV fetched successfully",
+        cv: {
+          ...cv,
+          downloadUrl,
+        },
+      };
+    } catch (error) {
+      console.error('Error fetching CV metadata:', error);
+      set.headers = {
+        "Access-Control-Allow-Origin": allowedOrigin,
+        "Access-Control-Allow-Methods": "GET",
+        ...varyHeader,
+      };
+      set.status = 500;
+      return {
+        status: 500,
+        message: "Failed to fetch CV",
+      };
+    }
+  })
+  .get("/file", async ({ set, request }) => {
+    const requestOrigin = request.headers.get('origin');
+    const allowedOrigin = requestOrigin ?? '*';
+    const varyHeader: Record<string, string> = requestOrigin ? { Vary: 'Origin' } : {};
     const cv = await getCV();
 
     if (!cv) {
@@ -142,7 +188,7 @@ export const cvController = baseCvController
       ...varyHeader,
     };
     set.status = 301;
-    return Response.redirect(new URL('/api/cv', request.url), 301);
+    return Response.redirect(new URL('/api/cv/file', request.url), 301);
   })
   // Protected routes - authentication required (JWT middleware applied here)
   .post(
