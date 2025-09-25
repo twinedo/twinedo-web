@@ -11,6 +11,8 @@ interface CV {
   filename: string;
   createdAt: string;
   updatedAt: string;
+  blobUrl?: string | null;
+  downloadUrl?: string | null;
 }
 
 export default function CVManagement() {
@@ -26,7 +28,18 @@ export default function CVManagement() {
       const response = await fetch('/api/cv', { cache: 'no-store' });
       if (response.ok) {
         const data = await response.json();
-        setCV(data.cv);
+        if (data?.cv) {
+          const cvData = data.cv as CV;
+          const normalizeDate = (value: string | Date) =>
+            typeof value === 'string' ? value : new Date(value).toISOString();
+          setCV({
+            ...cvData,
+            createdAt: normalizeDate(cvData.createdAt),
+            updatedAt: normalizeDate(cvData.updatedAt),
+          });
+        } else {
+          setCV(null);
+        }
         return data.cv;
       }
     } catch (error) {
@@ -87,7 +100,7 @@ export default function CVManagement() {
         if (fileInput) fileInput.value = '';
         alert('CV uploaded successfully!');
       } else {
-        const message = payload?.message || 'Something went wrong';
+      const message = payload?.message || 'Something went wrong';
         alert(`Upload failed: ${message}`);
       }
     } catch (error) {

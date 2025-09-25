@@ -1,7 +1,22 @@
 import type { ApiErrorResponse } from "@/shared";
 
 export const downloadCV = async () => {
-  const response = await fetch(`/api/cv/file`, { cache: 'no-store' });
+  const metaResponse = await fetch(`/api/cv`, { cache: 'no-store' });
+
+  if (!metaResponse.ok) {
+    const errorData: ApiErrorResponse = await metaResponse.json().catch(() => ({
+      status: metaResponse.status,
+      message: metaResponse.statusText,
+    }));
+    throw new Error(errorData.message || "Failed to get CV");
+  }
+
+  const meta = await metaResponse.json();
+  const downloadUrl: string = meta?.cv?.downloadUrl || '/api/cv/file';
+  const fallbackFilename: string = meta?.cv?.filename || 'cv.pdf';
+  const target = downloadUrl.startsWith('http') ? downloadUrl : new URL(downloadUrl, window.location.origin).toString();
+
+  const response = await fetch(target, { cache: 'no-store' });
 
   if (!response.ok) {
     const errorData: ApiErrorResponse = await response.json().catch(() => ({
@@ -14,7 +29,7 @@ export const downloadCV = async () => {
   // Get the filename from Content-Disposition header or use a default
   const contentDisposition = response.headers.get("Content-Disposition");
   const filename =
-    contentDisposition?.match(/filename="(.+)"/)?.[1] || "cv.pdf";
+    contentDisposition?.match(/filename="(.+)"/)?.[1] || fallbackFilename || "cv.pdf";
 
   // Handle the PDF file download
   const blob = await response.blob();

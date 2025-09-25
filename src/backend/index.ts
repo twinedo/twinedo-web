@@ -11,6 +11,7 @@ import { projectImageController } from "./src/services/projectImages";
 import { authController } from "./src/services/auth";
 import bcrypt from "bcryptjs";
 import { prisma } from './prisma/client';
+import { getCV as fetchCVRecord } from "./src/services/cv/model";
 import { join } from "node:path";
 import { readFile } from "node:fs/promises";
 import { resolveCVUploadDir } from "./src/utils/paths";
@@ -99,10 +100,9 @@ const app = new Elysia({ prefix: "/api" })
     try {
       console.log("Standalone CV download endpoint called");
 
-      // Get CV data directly
       let cv;
       try {
-        cv = await prisma.cV.findFirst();
+        cv = await fetchCVRecord();
       } catch (dbError) {
         console.error("Database error:", dbError);
         set.headers = {
@@ -125,7 +125,7 @@ const app = new Elysia({ prefix: "/api" })
       }
 
       // If CV has blobUrl, fetch and serve it
-      if (cv && 'blobUrl' in cv && cv.blobUrl && typeof cv.blobUrl === 'string') {
+      if (cv && cv.blobUrl && typeof cv.blobUrl === 'string') {
         console.log("Using blob URL:", cv.blobUrl);
         try {
           const blobResponse = await fetch(cv.blobUrl);

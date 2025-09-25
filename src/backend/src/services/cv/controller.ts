@@ -46,6 +46,7 @@ export const cvController = baseCvController
       set.headers = {
         "Access-Control-Allow-Origin": allowedOrigin,
         "Access-Control-Allow-Methods": "GET",
+        "Cache-Control": "no-store",
         ...varyHeader,
       };
 
@@ -58,7 +59,8 @@ export const cvController = baseCvController
       }
 
       const blobUrl = 'blobUrl' in cv ? (cv as { blobUrl?: string | null }).blobUrl ?? undefined : undefined;
-      const downloadUrl = blobUrl ?? (allowFilesystemFallback ? '/api/cv/file' : null);
+      const fallbackFileUrl = new URL('/api/cv/file', request.url).toString();
+      const downloadUrl = blobUrl ?? fallbackFileUrl;
 
       return {
         status: 200,
@@ -74,6 +76,7 @@ export const cvController = baseCvController
       set.headers = {
         "Access-Control-Allow-Origin": allowedOrigin,
         "Access-Control-Allow-Methods": "GET",
+        "Cache-Control": "no-store",
         ...varyHeader,
       };
       set.status = 500;
@@ -93,6 +96,7 @@ export const cvController = baseCvController
       set.headers = {
         "Access-Control-Allow-Origin": allowedOrigin,
         "Access-Control-Allow-Methods": "GET",
+        "Cache-Control": "no-store",
         ...varyHeader,
       };
       set.status = 404;
@@ -126,6 +130,7 @@ export const cvController = baseCvController
           set.headers = {
             "Access-Control-Allow-Origin": allowedOrigin,
             "Access-Control-Allow-Methods": "GET",
+            "Cache-Control": "no-store",
             ...varyHeader,
           };
           set.status = 502;
@@ -142,6 +147,7 @@ export const cvController = baseCvController
       set.headers = {
         "Access-Control-Allow-Origin": allowedOrigin,
         "Access-Control-Allow-Methods": "GET",
+        "Cache-Control": "no-store",
         ...varyHeader,
       };
       set.status = 404;
@@ -169,6 +175,7 @@ export const cvController = baseCvController
       set.headers = {
         "Access-Control-Allow-Origin": allowedOrigin,
         "Access-Control-Allow-Methods": "GET",
+        "Cache-Control": "no-store",
         ...varyHeader,
       };
       set.status = 404;
