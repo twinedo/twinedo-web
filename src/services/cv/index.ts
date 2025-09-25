@@ -13,7 +13,7 @@ interface CvMetaResponse {
   };
 }
 
-const fetchCvBlobMeta = async (): Promise<CvMetaResponse["cv"]> => {
+const fetchCvBlobMeta = async (): Promise<NonNullable<CvMetaResponse["cv"]>> => {
   const response = await fetch(`/api/cv/blob/meta`, { cache: 'no-store' });
 
   if (!response.ok) {
@@ -35,6 +35,9 @@ export const fetchCvMeta = fetchCvBlobMeta;
 
 export const downloadCV = async () => {
   const meta = await fetchCvBlobMeta();
+  if (!meta.downloadUrl) {
+    throw new Error('CV download URL is missing');
+  }
   const downloadUrl = meta.downloadUrl;
   const target = downloadUrl.startsWith('http')
     ? downloadUrl
