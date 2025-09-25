@@ -8,14 +8,20 @@ type DbCVRecord = {
   blobUrl?: string | null;
 };
 
-export const createOrUpdateCV = async (filename: string, blobUrl?: string) => {
+type CacheAwareCVDelegate = typeof prisma.cV & {
+  findFirst: (
+    args: (Parameters<typeof prisma.cV.findFirst>[0] & { cacheStrategy?: { ttl: number } })
+  ) => ReturnType<typeof prisma.cV.findFirst>;
+};
+
+export const createOrUpdateCV = async (filename: string, blobUrl?: string): Promise<DbCVRecord | null> => {
   const existing = await prisma.cV.findFirst({
     select: { id: true },
     orderBy: { updatedAt: 'desc' },
   });
 
   if (existing) {
-    return await prisma.cV.update({
+    const updated = await prisma.cV.update({
       where: { id: existing.id },
       data: {
         filename,
@@ -23,11 +29,13 @@ export const createOrUpdateCV = async (filename: string, blobUrl?: string) => {
         updatedAt: new Date(),
       },
     });
+    return normalizeRecord(updated as unknown as DbCVRecord);
   }
 
-  return await prisma.cV.create({
+  const created = await prisma.cV.create({
     data: { filename, blobUrl }
   });
+  return normalizeRecord(created as unknown as DbCVRecord);
 };
 
 const normalizeRecord = (record: DbCVRecord | null): DbCVRecord | null => {
@@ -43,7 +51,8 @@ const normalizeRecord = (record: DbCVRecord | null): DbCVRecord | null => {
 
 export const getCV = async (): Promise<DbCVRecord | null> => {
   try {
-    const record = await prisma.cV.findFirst({
+    const cacheAwareDelegate = prisma.cV as CacheAwareCVDelegate;
+    const record = await cacheAwareDelegate.findFirst({
       select: {
         id: true,
         filename: true,
@@ -52,6 +61,7 @@ export const getCV = async (): Promise<DbCVRecord | null> => {
         blobUrl: true,
       },
       orderBy: { updatedAt: 'desc' },
+      cacheStrategy: { ttl: 0 },
     });
 
     if (record) {
