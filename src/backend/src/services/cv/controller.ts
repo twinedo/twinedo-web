@@ -8,6 +8,7 @@ import jwt from "@elysiajs/jwt";
 import { jwtProps } from "../../utils/const";
 import { put } from "@vercel/blob";
 import { resolveCVUploadDir } from "../../utils/paths";
+import { getLatestBlobCv } from "./blobService";
 
 const CV_UPLOAD_DIR = resolveCVUploadDir();
 const allowFilesystemFallback = !process.env.VERCEL && process.env.NODE_ENV !== 'production';
@@ -83,6 +84,92 @@ export const cvController = baseCvController
       return {
         status: 500,
         message: "Failed to fetch CV",
+      };
+    }
+  })
+  .get("/blob/meta", async ({ set, request }) => {
+    const requestOrigin = request.headers.get('origin');
+    const allowedOrigin = requestOrigin ?? '*';
+    const varyHeader: Record<string, string> = requestOrigin ? { Vary: 'Origin' } : {};
+
+    set.headers = {
+      "Access-Control-Allow-Origin": allowedOrigin,
+      "Access-Control-Allow-Methods": "GET",
+      "Cache-Control": "no-store",
+      ...varyHeader,
+    };
+
+    const blobCv = await getLatestBlobCv();
+
+    if (!blobCv) {
+      set.status = 404;
+      return {
+        status: 404,
+        message: "No CV blob found",
+      };
+    }
+
+    return {
+      status: 200,
+      message: "CV blob fetched successfully",
+      cv: {
+        filename: blobCv.filename,
+        downloadUrl: blobCv.url,
+        blobUrl: blobCv.url,
+        size: blobCv.size,
+        updatedAt: blobCv.uploadedAt.toISOString(),
+        createdAt: blobCv.uploadedAt.toISOString(),
+      },
+    };
+  })
+  .get("/blob/file", async ({ set, request }) => {
+    const requestOrigin = request.headers.get('origin');
+    const allowedOrigin = requestOrigin ?? '*';
+    const varyHeader: Record<string, string> = requestOrigin ? { Vary: 'Origin' } : {};
+
+    const blobCv = await getLatestBlobCv();
+
+    if (!blobCv) {
+      set.headers = {
+        "Access-Control-Allow-Origin": allowedOrigin,
+        "Access-Control-Allow-Methods": "GET",
+        ...varyHeader,
+      };
+      set.status = 404;
+      return {
+        status: 404,
+        message: "No CV blob found",
+      };
+    }
+
+    try {
+      const blobResponse = await fetch(blobCv.url);
+      if (!blobResponse.ok) {
+        throw new Error(`Failed to fetch blob: ${blobResponse.status}`);
+      }
+
+      const blobData = await blobResponse.arrayBuffer();
+      return new Response(new Uint8Array(blobData), {
+        headers: {
+          "Content-Type": "application/pdf",
+          "Content-Disposition": `attachment; filename="${blobCv.filename}"`,
+          "Access-Control-Allow-Origin": allowedOrigin,
+          "Access-Control-Expose-Headers": "Content-Disposition",
+          "Cache-Control": "no-store",
+          ...varyHeader,
+        },
+      });
+    } catch (error) {
+      console.error('Error streaming blob CV:', error);
+      set.headers = {
+        "Access-Control-Allow-Origin": allowedOrigin,
+        "Access-Control-Allow-Methods": "GET",
+        ...varyHeader,
+      };
+      set.status = 502;
+      return {
+        status: 502,
+        message: "Failed to download CV blob",
       };
     }
   })

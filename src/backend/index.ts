@@ -15,6 +15,7 @@ import { getCV as fetchCVRecord } from "./src/services/cv/model";
 import { join } from "node:path";
 import { readFile } from "node:fs/promises";
 import { resolveCVUploadDir } from "./src/utils/paths";
+import { getLatestBlobCv } from "./src/services/cv/blobService";
 
 const app = new Elysia({ prefix: "/api" })
   .get('/health', () => ({ ok: true }))
@@ -100,6 +101,32 @@ const app = new Elysia({ prefix: "/api" })
     try {
       console.log("Standalone CV download endpoint called");
 
+      const blobCv = await getLatestBlobCv();
+
+      if (blobCv) {
+        try {
+          const blobResponse = await fetch(blobCv.url);
+          if (!blobResponse.ok) {
+            throw new Error(`Failed to fetch blob: ${blobResponse.status}`);
+          }
+
+          const blobData = await blobResponse.arrayBuffer();
+          return new Response(new Uint8Array(blobData), {
+            headers: {
+              "Content-Type": "application/pdf",
+              "Content-Disposition": `attachment; filename="${blobCv.filename}"`,
+              "Access-Control-Allow-Origin": allowedOrigin,
+              "Access-Control-Expose-Headers": "Content-Disposition",
+              "Cache-Control": "no-store",
+              ...varyHeader,
+            },
+          });
+        } catch (blobError) {
+          console.error('Error fetching blob:', blobError);
+        }
+      }
+
+      // Fallback to legacy storage if blob unavailable
       let cv;
       try {
         cv = await fetchCVRecord();
@@ -124,42 +151,6 @@ const app = new Elysia({ prefix: "/api" })
         return { status: 404, message: "No CV found" };
       }
 
-      // If CV has blobUrl, fetch and serve it
-      if (cv && cv.blobUrl && typeof cv.blobUrl === 'string') {
-        console.log("Using blob URL:", cv.blobUrl);
-        try {
-          const blobResponse = await fetch(cv.blobUrl);
-          if (!blobResponse.ok) {
-            throw new Error(`Failed to fetch blob: ${blobResponse.status}`);
-          }
-
-          const blobData = await blobResponse.arrayBuffer();
-          return new Response(new Uint8Array(blobData), {
-            headers: {
-              "Content-Type": "application/pdf",
-              "Content-Disposition": `attachment; filename="${cv.filename}"`,
-              "Access-Control-Allow-Origin": allowedOrigin,
-              "Access-Control-Expose-Headers": "Content-Disposition",
-              "Cache-Control": "no-store",
-              ...varyHeader,
-            },
-          });
-        } catch (blobError) {
-          console.error('Error fetching blob:', blobError);
-          if (!allowFilesystemFallback) {
-            set.headers = {
-              "Access-Control-Allow-Origin": allowedOrigin,
-              "Access-Control-Allow-Methods": "GET",
-              ...varyHeader,
-            };
-            set.status = 502;
-            return { status: 502, message: "CV file is temporarily unavailable. Please try again." };
-          }
-          // Fall through to filesystem fallback when allowed
-        }
-      }
-
-      // Fallback to filesystem
       if (!allowFilesystemFallback) {
         set.headers = {
           "Access-Control-Allow-Origin": allowedOrigin,

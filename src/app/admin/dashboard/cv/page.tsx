@@ -4,7 +4,7 @@ import { useRequireAdmin } from '../../hooks/useAdminAuth';
 import { AdminLayout } from '../../components/AdminLayout';
 import { useState, useEffect } from 'react';
 import { useAdminAuth } from '../../hooks/useAdminAuth';
-import { downloadCV } from '@/services/cv';
+import { downloadCV, fetchCvMeta } from '@/services/cv';
 
 interface CV {
   id: string;
@@ -25,23 +25,20 @@ export default function CVManagement() {
 
   const fetchCV = async () => {
     try {
-      const response = await fetch('/api/cv', { cache: 'no-store' });
-      if (response.ok) {
-        const data = await response.json();
-        if (data?.cv) {
-          const cvData = data.cv as CV;
-          const normalizeDate = (value: string | Date) =>
-            typeof value === 'string' ? value : new Date(value).toISOString();
-          setCV({
-            ...cvData,
-            createdAt: normalizeDate(cvData.createdAt),
-            updatedAt: normalizeDate(cvData.updatedAt),
-          });
-        } else {
-          setCV(null);
-        }
-        return data.cv;
+      const data = await fetchCvMeta();
+      if (data) {
+        const normalize = (value?: string) => value ?? new Date().toISOString();
+        setCV({
+          id: data.filename,
+          filename: data.filename,
+          createdAt: normalize(data.createdAt),
+          updatedAt: normalize(data.updatedAt),
+          downloadUrl: data.downloadUrl,
+          blobUrl: data.blobUrl,
+        });
+        return data;
       }
+      setCV(null);
     } catch (error) {
       console.error('Error fetching CV:', error);
     } finally {
