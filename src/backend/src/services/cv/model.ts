@@ -9,7 +9,21 @@ type DbCVRecord = {
 };
 
 export const createOrUpdateCV = async (filename: string, blobUrl?: string) => {
-  await prisma.cV.deleteMany({});
+  const existing = await prisma.cV.findFirst({
+    select: { id: true },
+    orderBy: { updatedAt: 'desc' },
+  });
+
+  if (existing) {
+    return await prisma.cV.update({
+      where: { id: existing.id },
+      data: {
+        filename,
+        blobUrl,
+        updatedAt: new Date(),
+      },
+    });
+  }
 
   return await prisma.cV.create({
     data: { filename, blobUrl }
