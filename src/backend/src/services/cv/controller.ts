@@ -57,13 +57,15 @@ export const cvController = baseCvController
         };
       }
 
-      const downloadUrl = cv.blobUrl ?? (allowFilesystemFallback ? '/api/cv/file' : null);
+      const blobUrl = 'blobUrl' in cv ? (cv as { blobUrl?: string | null }).blobUrl ?? undefined : undefined;
+      const downloadUrl = blobUrl ?? (allowFilesystemFallback ? '/api/cv/file' : null);
 
       return {
         status: 200,
         message: "CV fetched successfully",
         cv: {
           ...cv,
+          blobUrl,
           downloadUrl,
         },
       };
