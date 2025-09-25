@@ -1,5 +1,7 @@
 import { prisma } from "../../../prisma/client";
 
+const DEFAULT_CV_FILENAME = "Twin Edo Nugraha - CV.pdf";
+
 type DbCVRecord = {
   id: string;
   filename: string;
@@ -15,27 +17,22 @@ type CacheAwareCVDelegate = typeof prisma.cV & {
 };
 
 export const createOrUpdateCV = async (filename: string, blobUrl?: string): Promise<DbCVRecord | null> => {
-  const existing = await prisma.cV.findFirst({
-    select: { id: true },
-    orderBy: { updatedAt: 'desc' },
+  const targetFilename = filename || DEFAULT_CV_FILENAME;
+
+  const record = await prisma.cV.upsert({
+    where: { filename: targetFilename },
+    update: {
+      blobUrl,
+      // filename is still updated in case the constant ever changes
+      filename: targetFilename,
+    },
+    create: {
+      filename: targetFilename,
+      blobUrl,
+    },
   });
 
-  if (existing) {
-    const updated = await prisma.cV.update({
-      where: { id: existing.id },
-      data: {
-        filename,
-        blobUrl,
-        updatedAt: new Date(),
-      },
-    });
-    return normalizeRecord(updated as unknown as DbCVRecord);
-  }
-
-  const created = await prisma.cV.create({
-    data: { filename, blobUrl }
-  });
-  return normalizeRecord(created as unknown as DbCVRecord);
+  return normalizeRecord(record as unknown as DbCVRecord);
 };
 
 const normalizeRecord = (record: DbCVRecord | null): DbCVRecord | null => {
@@ -51,6 +48,21 @@ const normalizeRecord = (record: DbCVRecord | null): DbCVRecord | null => {
 
 export const getCV = async (): Promise<DbCVRecord | null> => {
   try {
+    const direct = await prisma.cV.findUnique({
+      where: { filename: DEFAULT_CV_FILENAME },
+      select: {
+        id: true,
+        filename: true,
+        createdAt: true,
+        updatedAt: true,
+        blobUrl: true,
+      },
+    });
+
+    if (direct) {
+      return normalizeRecord(direct as unknown as DbCVRecord);
+    }
+
     const cacheAwareDelegate = prisma.cV as CacheAwareCVDelegate;
     const record = await cacheAwareDelegate.findFirst({
       select: {
