@@ -29,26 +29,34 @@ const normalizeRecord = (record: DbCVRecord | null): DbCVRecord | null => {
 
 export const getCV = async (): Promise<DbCVRecord | null> => {
   try {
-    const withBlob = await prisma.$queryRaw<DbCVRecord[]>`
-      SELECT id, filename, "blobUrl", "createdAt", "updatedAt"
-      FROM "CV"
-      ORDER BY "updatedAt" DESC
-      LIMIT 1
-    `;
-
-    if (Array.isArray(withBlob) && withBlob.length > 0) {
-      return normalizeRecord(withBlob[0]);
-    }
+    const record = await prisma.cV.findFirst({
+      orderBy: { updatedAt: 'desc' },
+    });
+    return normalizeRecord(record as DbCVRecord | null);
   } catch (error) {
-    if (!(error instanceof Error)) throw error;
-    const code = (error as unknown as { code?: string }).code;
-    if (code !== '42703' && code !== '42P01') {
-      throw error;
-    }
-    // Column doesn't exist (older schema) - fall back below
-  }
+    console.error('Prisma CV lookup failed:', error);
 
-  try {
+    // Fallback to raw queries when using Accelerate or legacy schema issues
+    try {
+      const withBlob = await prisma.$queryRaw<DbCVRecord[]>`
+        SELECT id, filename, "blobUrl", "createdAt", "updatedAt"
+        FROM "CV"
+        ORDER BY "updatedAt" DESC
+        LIMIT 1
+      `;
+
+      if (Array.isArray(withBlob) && withBlob.length > 0) {
+        return normalizeRecord(withBlob[0]);
+      }
+    } catch (rawError) {
+      if (!(rawError instanceof Error)) throw rawError;
+      const code = (rawError as unknown as { code?: string }).code;
+      if (code !== '42703' && code !== '42P01') {
+        throw rawError;
+      }
+      // Column missing; fallthrough to no-blob query
+    }
+
     const withoutBlob = await prisma.$queryRaw<DbCVRecord[]>`
       SELECT id, filename, NULL::text AS "blobUrl", "createdAt", "updatedAt"
       FROM "CV"
@@ -59,10 +67,7 @@ export const getCV = async (): Promise<DbCVRecord | null> => {
     if (Array.isArray(withoutBlob) && withoutBlob.length > 0) {
       return normalizeRecord(withoutBlob[0]);
     }
-  } catch (error) {
-    console.error('Fallback CV query failed:', error);
-    throw error;
-  }
 
-  return null;
+    return null;
+  }
 };
