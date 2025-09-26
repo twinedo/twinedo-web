@@ -148,7 +148,7 @@ export function Projects() {
                       <div className="pt-1 pb-2.5 px-2.5">
                         <div className="flex flex-col space-y-2">
                           <div className="flex flex-row items-center justify-between">
-                            <div className="flex-1">
+                            <div className="flex flex-1">
                               <p className="text-white font-semibold truncate group-hover:text-blue-200 transition-colors">
                                 {o.project_name}
                               </p>
