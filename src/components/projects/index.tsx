@@ -149,7 +149,7 @@ export function Projects() {
                         <div className="flex flex-col space-y-2">
                           <div className="flex flex-row items-center justify-between">
                             <div className="flex flex-1">
-                              <p className="text-white font-semibold truncate group-hover:text-blue-200 transition-colors">
+                              <p className="text-white font-semibold line-clamp-2 group-hover:text-blue-200 transition-colors">
                                 {o.project_name}
                               </p>
                             </div>
