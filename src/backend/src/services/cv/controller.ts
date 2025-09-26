@@ -11,7 +11,9 @@ import { resolveCVUploadDir } from "../../utils/paths";
 import { getLatestBlobCv } from "./blobService";
 
 const CV_UPLOAD_DIR = resolveCVUploadDir();
-const allowFilesystemFallback = !process.env.VERCEL && process.env.NODE_ENV !== 'production';
+const isVercelEnv = Boolean(process.env.VERCEL);
+const allowFilesystemFallback = !isVercelEnv && process.env.NODE_ENV !== 'production';
+const hasBlobToken = Boolean(process.env.BLOB_READ_WRITE_TOKEN);
 
 // Ensure upload directory exists - wrapped in async function
 const ensureUploadDir = async () => {
@@ -304,19 +306,26 @@ export const cvController = baseCvController
         const fileBuffer = Buffer.from(arrayBuffer);
         let blobUrl: string | undefined;
 
-        try {
-          const blob = await put(`cv/${filename}`, fileBuffer, {
-            access: 'public',
-            addRandomSuffix: false,
-          });
-          blobUrl = blob.url;
-        } catch (error) {
-          console.error('Upload to Vercel Blob failed:', error);
+        if (hasBlobToken) {
+          try {
+            const blob = await put(`cv/${filename}`, fileBuffer, {
+              access: 'public',
+              addRandomSuffix: false,
+            });
+            blobUrl = blob.url;
+          } catch (error) {
+            console.error('Upload to Vercel Blob failed:', error);
+            if (!allowFilesystemFallback) {
+              throw new Error('Failed to upload CV to blob storage. Please check BLOB_READ_WRITE_TOKEN.');
+            }
+          }
+        } else if (!allowFilesystemFallback) {
+          throw new Error('Blob storage token is not configured. Set BLOB_READ_WRITE_TOKEN.');
         }
 
         if (!blobUrl) {
           if (!allowFilesystemFallback) {
-            throw new Error('Unable to store CV. Blob storage is not configured.');
+            throw new Error('Unable to store CV. Blob storage is required in this environment.');
           }
 
           try {
