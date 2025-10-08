@@ -3,6 +3,7 @@ import type { ApiErrorResponse } from "@/shared";
 export interface CvMeta {
   filename: string;
   downloadUrl: string;
+  blobUrl?: string;
   size?: number;
   createdAt?: string;
   updatedAt?: string;
@@ -33,6 +34,7 @@ const getCvMetaFromApi = async (): Promise<CvMeta | null> => {
   return {
     filename: cv.filename,
     downloadUrl: cv.downloadUrl,
+    blobUrl: cv.blobUrl ?? cv.downloadUrl,
     size: cv.size,
     createdAt: cv.createdAt,
     updatedAt: cv.updatedAt,
