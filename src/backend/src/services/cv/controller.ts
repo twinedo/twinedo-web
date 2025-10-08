@@ -1,57 +1,49 @@
 import { Elysia, t } from "elysia";
 import { createOrUpdateCV, getCV } from "./model";
-import { staticPlugin } from "@elysiajs/static";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { adminMiddleware } from "../auth/adminMiddleware";
 import jwt from "@elysiajs/jwt";
 import { jwtProps } from "../../utils/const";
-import { put } from "@vercel/blob";
 import { resolveCVUploadDir } from "../../utils/paths";
-import { getLatestBlobCv } from "./blobService";
 
 const CV_UPLOAD_DIR = resolveCVUploadDir();
-const isVercelEnv = Boolean(process.env.VERCEL);
-const allowFilesystemFallback = !isVercelEnv && process.env.NODE_ENV !== 'production';
-const hasBlobToken = Boolean(process.env.BLOB_READ_WRITE_TOKEN);
+const CV_FILENAME = "Twin Edo Nugraha - CV.pdf";
+const PUBLIC_DOWNLOAD_PATH = "/api/cv/file";
 
-// Ensure upload directory exists - wrapped in async function
 const ensureUploadDir = async () => {
   await mkdir(CV_UPLOAD_DIR, { recursive: true });
 };
 
-// Call the function to ensure directory exists
 ensureUploadDir().catch(console.error);
 
-// Create base controller
-const baseCvController = new Elysia({ prefix: "/cv" });
+const buildCorsHeaders = (origin: string | null) => {
+  const allowedOrigin = origin ?? "*";
+  const varyHeader = origin ? { Vary: "Origin" } : {};
 
-// Only use static plugin in development or when not on Vercel
-if (process.env.NODE_ENV === 'development' && !process.env.VERCEL && CV_UPLOAD_DIR) {
-  baseCvController.use(
-    staticPlugin({
-      assets: CV_UPLOAD_DIR,
-      prefix: "/cv/files",
-    })
-  );
-}
+  return {
+    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Methods": "GET",
+    "Access-Control-Expose-Headers": "Content-Disposition",
+    "Cache-Control": "no-store",
+    ...varyHeader,
+  } as Record<string, string>;
+};
 
-export const cvController = baseCvController
-  // Public routes - no authentication required
+const readCvBytes = async (filename: string) => {
+  const filePath = join(CV_UPLOAD_DIR, filename);
+  const fileBuffer = await readFile(filePath);
+  return new Uint8Array(fileBuffer);
+};
+
+export const cvController = new Elysia({ prefix: "/cv" })
   .get("/", async ({ set, request }) => {
-    const requestOrigin = request.headers.get('origin');
-    const allowedOrigin = requestOrigin ?? '*';
-    const varyHeader: Record<string, string> = requestOrigin ? { Vary: 'Origin' } : {};
+    const origin = request.headers.get("origin");
+    const headers = buildCorsHeaders(origin);
 
     try {
       const cv = await getCV();
-
-      set.headers = {
-        "Access-Control-Allow-Origin": allowedOrigin,
-        "Access-Control-Allow-Methods": "GET",
-        "Cache-Control": "no-store",
-        ...varyHeader,
-      };
+      set.headers = headers;
 
       if (!cv) {
         set.status = 404;
@@ -61,27 +53,23 @@ export const cvController = baseCvController
         };
       }
 
-      const blobUrl = 'blobUrl' in cv ? (cv as { blobUrl?: string | null }).blobUrl ?? undefined : undefined;
-      const fallbackFileUrl = new URL('/api/cv/file', request.url).toString();
-      const downloadUrl = blobUrl ?? fallbackFileUrl;
+      const downloadUrl = PUBLIC_DOWNLOAD_PATH;
 
       return {
         status: 200,
         message: "CV fetched successfully",
         cv: {
-          ...cv,
-          blobUrl,
+          filename: cv.filename,
           downloadUrl,
+          blobUrl: downloadUrl,
+          size: cv.size,
+          createdAt: cv.createdAt.toISOString(),
+          updatedAt: cv.updatedAt.toISOString(),
         },
       };
     } catch (error) {
-      console.error('Error fetching CV metadata:', error);
-      set.headers = {
-        "Access-Control-Allow-Origin": allowedOrigin,
-        "Access-Control-Allow-Methods": "GET",
-        "Cache-Control": "no-store",
-        ...varyHeader,
-      };
+      console.error("Error fetching CV metadata:", error);
+      set.headers = headers;
       set.status = 500;
       return {
         status: 500,
@@ -89,96 +77,11 @@ export const cvController = baseCvController
       };
     }
   })
-  .get("/blob/meta", async ({ set, request }) => {
-    const requestOrigin = request.headers.get('origin');
-    const allowedOrigin = requestOrigin ?? '*';
-    const varyHeader: Record<string, string> = requestOrigin ? { Vary: 'Origin' } : {};
-
-    set.headers = {
-      "Access-Control-Allow-Origin": allowedOrigin,
-      "Access-Control-Allow-Methods": "GET",
-      "Cache-Control": "no-store",
-      ...varyHeader,
-    };
-
-    const blobCv = await getLatestBlobCv();
-
-    if (!blobCv) {
-      set.status = 404;
-      return {
-        status: 404,
-        message: "No CV blob found",
-      };
-    }
-
-    return {
-      status: 200,
-      message: "CV blob fetched successfully",
-      cv: {
-        filename: blobCv.filename,
-        downloadUrl: blobCv.url,
-        blobUrl: blobCv.url,
-        size: blobCv.size,
-        updatedAt: blobCv.uploadedAt.toISOString(),
-        createdAt: blobCv.uploadedAt.toISOString(),
-      },
-    };
-  })
-  .get("/blob/file", async ({ set, request }) => {
-    const requestOrigin = request.headers.get('origin');
-    const allowedOrigin = requestOrigin ?? '*';
-    const varyHeader: Record<string, string> = requestOrigin ? { Vary: 'Origin' } : {};
-
-    const blobCv = await getLatestBlobCv();
-
-    if (!blobCv) {
-      set.headers = {
-        "Access-Control-Allow-Origin": allowedOrigin,
-        "Access-Control-Allow-Methods": "GET",
-        ...varyHeader,
-      };
-      set.status = 404;
-      return {
-        status: 404,
-        message: "No CV blob found",
-      };
-    }
-
-    try {
-      const blobResponse = await fetch(blobCv.url);
-      if (!blobResponse.ok) {
-        throw new Error(`Failed to fetch blob: ${blobResponse.status}`);
-      }
-
-      const blobData = await blobResponse.arrayBuffer();
-      return new Response(new Uint8Array(blobData), {
-        headers: {
-          "Content-Type": "application/pdf",
-          "Content-Disposition": `attachment; filename="${blobCv.filename}"`,
-          "Access-Control-Allow-Origin": allowedOrigin,
-          "Access-Control-Expose-Headers": "Content-Disposition",
-          "Cache-Control": "no-store",
-          ...varyHeader,
-        },
-      });
-    } catch (error) {
-      console.error('Error streaming blob CV:', error);
-      set.headers = {
-        "Access-Control-Allow-Origin": allowedOrigin,
-        "Access-Control-Allow-Methods": "GET",
-        ...varyHeader,
-      };
-      set.status = 502;
-      return {
-        status: 502,
-        message: "Failed to download CV blob",
-      };
-    }
-  })
   .get("/file", async ({ set, request }) => {
-    const requestOrigin = request.headers.get('origin');
-    const allowedOrigin = requestOrigin ?? '*';
-    const varyHeader: Record<string, string> = requestOrigin ? { Vary: 'Origin' } : {};
+    const origin = request.headers.get("origin");
+    const allowedOrigin = origin ?? "*";
+    const varyHeader = origin ? { Vary: "Origin" } : {};
+
     const cv = await getCV();
 
     if (!cv) {
@@ -195,62 +98,9 @@ export const cvController = baseCvController
       };
     }
 
-    if (cv && 'blobUrl' in cv && cv.blobUrl && typeof cv.blobUrl === 'string') {
-      try {
-        const blobResponse = await fetch(cv.blobUrl);
-        if (!blobResponse.ok) {
-          throw new Error(`Failed to fetch blob: ${blobResponse.status}`);
-        }
-
-        const blobData = await blobResponse.arrayBuffer();
-        return new Response(new Uint8Array(blobData), {
-          headers: {
-            "Content-Type": "application/pdf",
-            "Content-Disposition": `attachment; filename="${cv.filename}"`,
-            "Access-Control-Allow-Origin": allowedOrigin,
-            "Access-Control-Expose-Headers": "Content-Disposition",
-            "Cache-Control": "no-store",
-            ...varyHeader,
-          },
-        });
-      } catch (error) {
-        console.error('Error fetching blob:', error);
-        if (!allowFilesystemFallback) {
-          set.headers = {
-            "Access-Control-Allow-Origin": allowedOrigin,
-            "Access-Control-Allow-Methods": "GET",
-            "Cache-Control": "no-store",
-            ...varyHeader,
-          };
-          set.status = 502;
-          return {
-            status: 502,
-            message: "CV file is temporarily unavailable. Please try again shortly.",
-          };
-        }
-        // Fall through to filesystem fallback when allowed
-      }
-    }
-
-    if (!allowFilesystemFallback) {
-      set.headers = {
-        "Access-Control-Allow-Origin": allowedOrigin,
-        "Access-Control-Allow-Methods": "GET",
-        "Cache-Control": "no-store",
-        ...varyHeader,
-      };
-      set.status = 404;
-      return {
-        status: 404,
-        message: "CV file not found",
-      };
-    }
-
-    const filePath = join(CV_UPLOAD_DIR, cv.filename);
-
     try {
-      const fileBuffer = await readFile(filePath);
-      return new Response(new Uint8Array(fileBuffer), {
+      const fileBytes = await readCvBytes(cv.filename);
+      return new Response(fileBytes, {
         headers: {
           "Content-Type": "application/pdf",
           "Content-Disposition": `attachment; filename="${cv.filename}"`,
@@ -260,7 +110,8 @@ export const cvController = baseCvController
           ...varyHeader,
         },
       });
-    } catch {
+    } catch (error) {
+      console.error("Failed to read CV file:", error);
       set.headers = {
         "Access-Control-Allow-Origin": allowedOrigin,
         "Access-Control-Allow-Methods": "GET",
@@ -274,83 +125,67 @@ export const cvController = baseCvController
       };
     }
   })
-  .use(jwt(jwtProps))
-  // Public routes - redirect download path
   .get("/download", async ({ set, request }) => {
-    const origin = request.headers.get('origin');
-    const allowedOrigin = origin ?? '*';
-    const varyHeader: Record<string, string> = origin ? { Vary: 'Origin' } : {};
-    set.headers = {
-      "Access-Control-Allow-Origin": allowedOrigin,
-      "Access-Control-Allow-Methods": "GET",
-      ...varyHeader,
-    };
-    set.status = 301;
-    return Response.redirect(new URL('/api/cv/file', request.url), 301);
+    const origin = request.headers.get("origin");
+    const headers = buildCorsHeaders(origin);
+    const cv = await getCV();
+
+    if (!cv) {
+      set.headers = headers;
+      set.status = 404;
+      return {
+        status: 404,
+        message: "No CV found",
+      };
+    }
+
+    set.headers = headers;
+    const redirectUrl = new URL(PUBLIC_DOWNLOAD_PATH, request.url);
+    return Response.redirect(redirectUrl, 302);
   })
-  // Protected routes - authentication required (JWT middleware applied here)
+  .use(jwt(jwtProps))
   .post(
     "/upload",
     async ({ body }) => {
-        const file = Array.isArray(body.cv_file)
-          ? body.cv_file[0]
-          : body.cv_file;
+      const file = Array.isArray(body.cv_file) ? body.cv_file[0] : body.cv_file;
 
-        if (!file) throw new Error("No file uploaded");
-        if (file.type !== "application/pdf")
-          throw new Error("Only PDF files allowed");
+      if (!file) {
+        throw new Error("No file uploaded");
+      }
 
-        // Constant filename
-        const filename = "Twin Edo Nugraha - CV.pdf";
-        const arrayBuffer = await file.arrayBuffer();
-        const fileBuffer = Buffer.from(arrayBuffer);
-        let blobUrl: string | undefined;
+      if (file.type !== "application/pdf") {
+        throw new Error("Only PDF files allowed");
+      }
 
-        if (hasBlobToken) {
-          try {
-            const blob = await put(`cv/${filename}`, fileBuffer, {
-              access: 'public',
-              addRandomSuffix: false,
-            });
-            blobUrl = blob.url;
-          } catch (error) {
-            console.error('Upload to Vercel Blob failed:', error);
-            if (!allowFilesystemFallback) {
-              throw new Error('Failed to upload CV to blob storage. Please check BLOB_READ_WRITE_TOKEN.');
-            }
-          }
-        } else if (!allowFilesystemFallback) {
-          throw new Error('Blob storage token is not configured. Set BLOB_READ_WRITE_TOKEN.');
-        }
+      const arrayBuffer = await file.arrayBuffer();
+      const fileBuffer = Buffer.from(arrayBuffer);
 
-        if (!blobUrl) {
-          if (!allowFilesystemFallback) {
-            throw new Error('Unable to store CV. Blob storage is required in this environment.');
-          }
+      try {
+        await ensureUploadDir();
+        const filePath = join(CV_UPLOAD_DIR, CV_FILENAME);
+        await writeFile(filePath, fileBuffer);
+      } catch (error) {
+        console.error("Failed to persist CV on filesystem:", error);
+        throw new Error("CV upload failed. Please try again later.");
+      }
 
-          try {
-            await ensureUploadDir();
-            const filePath = join(CV_UPLOAD_DIR, filename);
-            await writeFile(filePath, fileBuffer);
-          } catch (error) {
-            console.error('Failed to persist CV on filesystem:', error);
-            throw new Error('CV upload failed. Please try again later.');
-          }
-        }
+      const data = await createOrUpdateCV(CV_FILENAME);
 
-        // Save to database with blob URL (or without if filesystem fallback)
-        const data = await createOrUpdateCV(filename, blobUrl);
-        const storage = blobUrl ? 'blob' : 'filesystem';
+      if (!data) {
+        throw new Error("CV metadata unavailable after upload.");
+      }
 
-        return {
-          status: 201,
-          message: "CV uploaded successfully",
-          data: {
-            ...data,
-            url: blobUrl,
-            storage,
-          },
-        };
+      return {
+        status: 201,
+        message: "CV uploaded successfully",
+        data: {
+          ...data,
+          url: PUBLIC_DOWNLOAD_PATH,
+          downloadUrl: PUBLIC_DOWNLOAD_PATH,
+          blobUrl: PUBLIC_DOWNLOAD_PATH,
+          storage: "public",
+        },
+      };
     },
     {
       beforeHandle: adminMiddleware(),
@@ -365,6 +200,9 @@ export const cvController = baseCvController
     }
   );
 
-if (process.env.NODE_ENV !== 'production' && Array.isArray(cvController.routes)) {
-  console.log('[CVController] registered routes:', cvController.routes.map((route) => `${route.method} ${route.path}`).join(', '));
+if (process.env.NODE_ENV !== "production" && Array.isArray(cvController.routes)) {
+  console.log(
+    "[CVController] registered routes:",
+    cvController.routes.map((route) => `${route.method} ${route.path}`).join(", ")
+  );
 }

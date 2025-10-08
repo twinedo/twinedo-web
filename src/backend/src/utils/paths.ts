@@ -39,7 +39,7 @@ export const resolveCVUploadDir = () => {
     return envPath;
   }
 
-  const defaultPath = join(process.cwd(), 'src', 'backend', 'src', 'uploads', 'cv');
+  const defaultPath = join(process.cwd(), 'public', 'cv');
   cachedCvUploadDir = defaultPath;
   return defaultPath;
 };

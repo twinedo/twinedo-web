@@ -15,7 +15,6 @@ import { getCV as fetchCVRecord } from "./src/services/cv/model";
 import { join } from "node:path";
 import { readFile } from "node:fs/promises";
 import { resolveCVUploadDir } from "./src/utils/paths";
-import { getLatestBlobCv } from "./src/services/cv/blobService";
 
 const app = new Elysia({ prefix: "/api" })
   .get('/health', () => ({ ok: true }))
@@ -93,79 +92,28 @@ const app = new Elysia({ prefix: "/api" })
   // Completely isolated CV download endpoint - no controller dependencies
   .get("/download/cv", async ({ set, request }) => {
     const CV_UPLOAD_DIR = resolveCVUploadDir();
-    const allowFilesystemFallback = !process.env.VERCEL && process.env.NODE_ENV !== 'production';
     const requestOrigin = request.headers.get('origin');
     const allowedOrigin = requestOrigin ?? '*';
     const varyHeader: Record<string, string> = requestOrigin ? { Vary: 'Origin' } : {};
 
     try {
-      console.log("Standalone CV download endpoint called");
+      const cv = await fetchCVRecord();
 
-      const blobCv = await getLatestBlobCv();
-
-      if (blobCv) {
-        try {
-          const blobResponse = await fetch(blobCv.url);
-          if (!blobResponse.ok) {
-            throw new Error(`Failed to fetch blob: ${blobResponse.status}`);
-          }
-
-          const blobData = await blobResponse.arrayBuffer();
-          return new Response(new Uint8Array(blobData), {
-            headers: {
-              "Content-Type": "application/pdf",
-              "Content-Disposition": `attachment; filename="${blobCv.filename}"`,
-              "Access-Control-Allow-Origin": allowedOrigin,
-              "Access-Control-Expose-Headers": "Content-Disposition",
-              "Cache-Control": "no-store",
-              ...varyHeader,
-            },
-          });
-        } catch (blobError) {
-          console.error('Error fetching blob:', blobError);
-        }
-      }
-
-      // Fallback to legacy storage if blob unavailable
-      let cv;
-      try {
-        cv = await fetchCVRecord();
-      } catch (dbError) {
-        console.error("Database error:", dbError);
-        set.headers = {
-          "Access-Control-Allow-Origin": allowedOrigin,
-          "Access-Control-Allow-Methods": "GET",
-          ...varyHeader,
-        };
-        set.status = 500;
-        return { status: 500, message: "Database error" };
-      }
+      set.headers = {
+        "Access-Control-Allow-Origin": allowedOrigin,
+        "Access-Control-Allow-Methods": "GET",
+        "Access-Control-Expose-Headers": "Content-Disposition",
+        "Cache-Control": "no-store",
+        ...varyHeader,
+      };
 
       if (!cv) {
         set.status = 404;
-        set.headers = {
-          "Access-Control-Allow-Origin": allowedOrigin,
-          "Access-Control-Allow-Methods": "GET",
-          ...varyHeader,
-        };
         return { status: 404, message: "No CV found" };
       }
 
-      if (!allowFilesystemFallback) {
-        set.headers = {
-          "Access-Control-Allow-Origin": allowedOrigin,
-          "Access-Control-Allow-Methods": "GET",
-          ...varyHeader,
-        };
-        set.status = 404;
-        return { status: 404, message: "CV file not found" };
-      }
-
-      console.log("Using filesystem fallback");
-      const filePath = join(CV_UPLOAD_DIR, cv.filename);
-      console.log("File path:", filePath);
-
       try {
+        const filePath = join(CV_UPLOAD_DIR, cv.filename);
         const fileBuffer = await readFile(filePath);
 
         return new Response(new Uint8Array(fileBuffer), {
@@ -179,12 +127,7 @@ const app = new Elysia({ prefix: "/api" })
           },
         });
       } catch (fileError) {
-        console.error('Error reading file:', fileError);
-        set.headers = {
-          "Access-Control-Allow-Origin": allowedOrigin,
-          "Access-Control-Allow-Methods": "GET",
-          ...varyHeader,
-        };
+        console.error('Error reading CV file:', fileError);
         set.status = 404;
         return { status: 404, message: "CV file not found" };
       }

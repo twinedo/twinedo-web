@@ -1,125 +1,62 @@
-import { prisma } from "../../../prisma/client";
+import { readdir, stat } from "node:fs/promises";
+import { join } from "node:path";
+import { resolveCVUploadDir } from "../../utils/paths";
 
 const DEFAULT_CV_FILENAME = "Twin Edo Nugraha - CV.pdf";
 
-type DbCVRecord = {
+export type CvRecord = {
   id: string;
   filename: string;
   createdAt: Date;
   updatedAt: Date;
   blobUrl?: string | null;
+  size?: number;
 };
 
-type CacheAwareCVDelegate = typeof prisma.cV & {
-  findFirst: (
-    args: (Parameters<typeof prisma.cV.findFirst>[0] & { cacheStrategy?: { ttl: number } })
-  ) => ReturnType<typeof prisma.cV.findFirst>;
-};
+const getFilePath = (filename: string) => join(resolveCVUploadDir(), filename);
 
-export const createOrUpdateCV = async (filename: string, blobUrl?: string): Promise<DbCVRecord | null> => {
-  const targetFilename = filename || DEFAULT_CV_FILENAME;
-
-  const record = await prisma.cV.upsert({
-    where: { filename: targetFilename },
-    update: {
-      blobUrl,
-      // filename is still updated in case the constant ever changes
-      filename: targetFilename,
-    },
-    create: {
-      filename: targetFilename,
-      blobUrl,
-    },
-  });
-
-  return normalizeRecord(record as unknown as DbCVRecord);
-};
-
-const normalizeRecord = (record: DbCVRecord | null): DbCVRecord | null => {
-  if (!record) return null;
-  return {
-    id: record.id,
-    filename: record.filename,
-    createdAt: new Date(record.createdAt),
-    updatedAt: new Date(record.updatedAt),
-    blobUrl: record.blobUrl ?? null,
-  };
-};
-
-export const getCV = async (): Promise<DbCVRecord | null> => {
+const statToRecord = async (filename: string) => {
   try {
-    const direct = await prisma.cV.findUnique({
-      where: { filename: DEFAULT_CV_FILENAME },
-      select: {
-        id: true,
-        filename: true,
-        createdAt: true,
-        updatedAt: true,
-        blobUrl: true,
-      },
-    });
-
-    if (direct) {
-      return normalizeRecord(direct as unknown as DbCVRecord);
+    const filePath = getFilePath(filename);
+    const fileStat = await stat(filePath);
+    if (!fileStat.isFile()) {
+      return null;
     }
 
-    const cacheAwareDelegate = prisma.cV as CacheAwareCVDelegate;
-    const record = await cacheAwareDelegate.findFirst({
-      select: {
-        id: true,
-        filename: true,
-        createdAt: true,
-        updatedAt: true,
-        blobUrl: true,
-      },
-      orderBy: { updatedAt: 'desc' },
-      cacheStrategy: { ttl: 0 },
-    });
+    const createdAt = fileStat.birthtimeMs > 0 ? new Date(fileStat.birthtimeMs) : new Date(fileStat.ctimeMs);
 
-    if (record) {
-      return normalizeRecord(record as unknown as DbCVRecord);
-    }
-  } catch (error) {
-    console.error('Prisma CV lookup failed:', error);
+    return {
+      id: filename,
+      filename,
+      createdAt,
+      updatedAt: new Date(fileStat.mtimeMs),
+      blobUrl: null,
+      size: fileStat.size,
+    } satisfies CvRecord;
+  } catch {
+    return null;
+  }
+};
+
+export const createOrUpdateCV = async (filename: string): Promise<CvRecord | null> => {
+  // After the file is written to disk we simply rescan for metadata.
+  return statToRecord(filename || DEFAULT_CV_FILENAME);
+};
+
+export const getCV = async (): Promise<CvRecord | null> => {
+  const primary = await statToRecord(DEFAULT_CV_FILENAME);
+  if (primary) {
+    return primary;
   }
 
   try {
-    const withBlob = await prisma.$queryRaw<DbCVRecord[]>`
-      SELECT id, filename, "blobUrl", "createdAt", "updatedAt"
-      FROM "CV"
-      ORDER BY "updatedAt" DESC
-      LIMIT 1
-    `;
-
-    if (Array.isArray(withBlob) && withBlob.length > 0) {
-      return normalizeRecord(withBlob[0]);
+    const entries = await readdir(resolveCVUploadDir(), { withFileTypes: true });
+    const firstPdf = entries.find((entry) => entry.isFile() && entry.name.toLowerCase().endsWith(".pdf"));
+    if (firstPdf) {
+      return statToRecord(firstPdf.name);
     }
-  } catch (rawError) {
-    if (!(rawError instanceof Error)) {
-      console.error('Unknown CV raw query error:', rawError);
-      return null;
-    }
-    const code = (rawError as unknown as { code?: string }).code;
-    if (code !== '42703' && code !== '42P01') {
-      console.error('Unexpected CV raw query error:', rawError);
-      return null;
-    }
-    // Column missing, fall through
-  }
-
-  try {
-    const withoutBlob = await prisma.$queryRaw<DbCVRecord[]>`
-      SELECT id, filename, NULL::text AS "blobUrl", "createdAt", "updatedAt"
-      FROM "CV"
-      ORDER BY "updatedAt" DESC
-      LIMIT 1
-    `;
-
-    if (Array.isArray(withoutBlob) && withoutBlob.length > 0) {
-      return normalizeRecord(withoutBlob[0]);
-    }
-  } catch (fallbackError) {
-    console.error('Fallback CV query failed:', fallbackError);
+  } catch {
+    // Directory might not exist yet.
   }
 
   return null;
