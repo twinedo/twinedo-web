@@ -95,6 +95,8 @@ const app = new Elysia({ prefix: "/api" })
     const requestOrigin = request.headers.get('origin');
     const allowedOrigin = requestOrigin ?? '*';
     const varyHeader: Record<string, string> = requestOrigin ? { Vary: 'Origin' } : {};
+    const isVercelEnv = Boolean(process.env.VERCEL);
+    const allowFilesystemFallback = !isVercelEnv || process.env.NODE_ENV !== 'production';
 
     try {
       const cv = await fetchCVRecord();
@@ -110,6 +112,34 @@ const app = new Elysia({ prefix: "/api" })
       if (!cv) {
         set.status = 404;
         return { status: 404, message: "No CV found" };
+      }
+
+      if (cv.blobUrl) {
+        try {
+          const blobResponse = await fetch(cv.blobUrl);
+          if (!blobResponse.ok) {
+            throw new Error(`Failed to fetch blob: ${blobResponse.status}`);
+          }
+
+          const blobArrayBuffer = await blobResponse.arrayBuffer();
+
+          return new Response(new Uint8Array(blobArrayBuffer), {
+            headers: {
+              "Content-Type": "application/pdf",
+              "Content-Disposition": `attachment; filename="${cv.filename}"`,
+              "Access-Control-Allow-Origin": allowedOrigin,
+              "Access-Control-Expose-Headers": "Content-Disposition",
+              "Cache-Control": "no-store",
+              ...varyHeader,
+            },
+          });
+        } catch (error) {
+          console.error('Error downloading CV blob:', error);
+          if (!allowFilesystemFallback) {
+            set.status = 502;
+            return { status: 502, message: 'CV file is temporarily unavailable. Please try again later.' };
+          }
+        }
       }
 
       try {

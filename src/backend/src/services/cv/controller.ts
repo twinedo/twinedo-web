@@ -6,10 +6,14 @@ import { adminMiddleware } from "../auth/adminMiddleware";
 import jwt from "@elysiajs/jwt";
 import { jwtProps } from "../../utils/const";
 import { resolveCVUploadDir } from "../../utils/paths";
+import { uploadCvToBlob } from "./blobService";
 
 const CV_UPLOAD_DIR = resolveCVUploadDir();
 const CV_FILENAME = "Twin Edo Nugraha - CV.pdf";
 const PUBLIC_DOWNLOAD_PATH = "/api/cv/file";
+const hasBlobToken = Boolean(process.env.BLOB_READ_WRITE_TOKEN);
+const isVercelEnv = Boolean(process.env.VERCEL);
+const allowFilesystemFallback = !isVercelEnv || process.env.NODE_ENV !== "production";
 
 const ensureUploadDir = async () => {
   await mkdir(CV_UPLOAD_DIR, { recursive: true });
@@ -53,7 +57,7 @@ export const cvController = new Elysia({ prefix: "/cv" })
         };
       }
 
-      const downloadUrl = PUBLIC_DOWNLOAD_PATH;
+      const downloadUrl = cv.blobUrl ?? PUBLIC_DOWNLOAD_PATH;
 
       return {
         status: 200,
@@ -61,7 +65,7 @@ export const cvController = new Elysia({ prefix: "/cv" })
         cv: {
           filename: cv.filename,
           downloadUrl,
-          blobUrl: downloadUrl,
+          blobUrl: cv.blobUrl ?? null,
           size: cv.size,
           createdAt: cv.createdAt.toISOString(),
           updatedAt: cv.updatedAt.toISOString(),
@@ -98,9 +102,8 @@ export const cvController = new Elysia({ prefix: "/cv" })
       };
     }
 
-    try {
-      const fileBytes = await readCvBytes(cv.filename);
-      return new Response(fileBytes, {
+    const sendResponse = (bytes: Uint8Array) =>
+      new Response(bytes, {
         headers: {
           "Content-Type": "application/pdf",
           "Content-Disposition": `attachment; filename="${cv.filename}"`,
@@ -110,6 +113,36 @@ export const cvController = new Elysia({ prefix: "/cv" })
           ...varyHeader,
         },
       });
+
+    if (cv.blobUrl) {
+      try {
+        const blobResponse = await fetch(cv.blobUrl);
+        if (!blobResponse.ok) {
+          throw new Error(`Failed to fetch blob: ${blobResponse.status}`);
+        }
+        const blobData = await blobResponse.arrayBuffer();
+        return sendResponse(new Uint8Array(blobData));
+      } catch (error) {
+        console.error("Failed to stream CV blob:", error);
+        if (!allowFilesystemFallback) {
+          set.headers = {
+            "Access-Control-Allow-Origin": allowedOrigin,
+            "Access-Control-Allow-Methods": "GET",
+            "Cache-Control": "no-store",
+            ...varyHeader,
+          };
+          set.status = 502;
+          return {
+            status: 502,
+            message: "CV file is temporarily unavailable. Please try again later.",
+          };
+        }
+      }
+    }
+
+    try {
+      const fileBytes = await readCvBytes(cv.filename);
+      return sendResponse(fileBytes);
     } catch (error) {
       console.error("Failed to read CV file:", error);
       set.headers = {
@@ -160,30 +193,56 @@ export const cvController = new Elysia({ prefix: "/cv" })
       const arrayBuffer = await file.arrayBuffer();
       const fileBuffer = Buffer.from(arrayBuffer);
 
-      try {
-        await ensureUploadDir();
-        const filePath = join(CV_UPLOAD_DIR, CV_FILENAME);
-        await writeFile(filePath, fileBuffer);
-      } catch (error) {
-        console.error("Failed to persist CV on filesystem:", error);
-        throw new Error("CV upload failed. Please try again later.");
+      let blobMeta: { url: string; size: number; uploadedAt?: Date } | undefined;
+
+      if (hasBlobToken) {
+        try {
+          const blob = await uploadCvToBlob(CV_FILENAME, fileBuffer);
+          blobMeta = {
+            url: blob.url,
+            size: blob.size,
+            uploadedAt: blob.uploadedAt ? new Date(blob.uploadedAt) : undefined,
+          };
+        } catch (error) {
+          console.error("Failed to upload CV to blob storage:", error);
+          if (!allowFilesystemFallback) {
+            throw new Error("CV upload failed. Please try again later.");
+          }
+        }
       }
 
-      const data = await createOrUpdateCV(CV_FILENAME);
+      if (!blobMeta) {
+        if (!allowFilesystemFallback) {
+          throw new Error("Blob storage is required in this environment.");
+        }
+
+        try {
+          await ensureUploadDir();
+          const filePath = join(CV_UPLOAD_DIR, CV_FILENAME);
+          await writeFile(filePath, fileBuffer);
+        } catch (error) {
+          console.error("Failed to persist CV on filesystem:", error);
+          throw new Error("CV upload failed. Please try again later.");
+        }
+      }
+
+      const data = await createOrUpdateCV(CV_FILENAME, blobMeta);
 
       if (!data) {
         throw new Error("CV metadata unavailable after upload.");
       }
+
+      const downloadUrl = blobMeta?.url ?? PUBLIC_DOWNLOAD_PATH;
 
       return {
         status: 201,
         message: "CV uploaded successfully",
         data: {
           ...data,
-          url: PUBLIC_DOWNLOAD_PATH,
-          downloadUrl: PUBLIC_DOWNLOAD_PATH,
-          blobUrl: PUBLIC_DOWNLOAD_PATH,
-          storage: "public",
+          url: downloadUrl,
+          downloadUrl,
+          blobUrl: blobMeta?.url ?? null,
+          storage: blobMeta ? "blob" : "filesystem",
         },
       };
     },
