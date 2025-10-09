@@ -103,7 +103,7 @@ export const cvController = new Elysia({ prefix: "/cv" })
     }
 
     const sendResponse = (bytes: Uint8Array) =>
-      new Response(bytes, {
+      new Response(Buffer.from(bytes), {
         headers: {
           "Content-Type": "application/pdf",
           "Content-Disposition": `attachment; filename="${cv.filename}"`,
