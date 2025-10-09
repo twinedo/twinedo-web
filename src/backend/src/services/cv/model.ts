@@ -1,9 +1,18 @@
 import { readdir, stat } from "node:fs/promises";
 import { join } from "node:path";
+import { prisma } from "../../../prisma/client";
 import { resolveCVUploadDir } from "../../utils/paths";
 import { getLatestBlobCv, type BlobCvFile } from "./blobService";
 
 const DEFAULT_CV_FILENAME = "Twin Edo Nugraha - CV.pdf";
+
+type PrismaCVRecord = {
+  id: string;
+  filename: string;
+  createdAt: Date;
+  updatedAt: Date;
+  blobUrl: string | null;
+};
 
 export type CvRecord = {
   id: string;
@@ -13,6 +22,15 @@ export type CvRecord = {
   blobUrl?: string | null;
   size?: number;
 };
+
+const normalizePrismaRecord = (record: PrismaCVRecord, size?: number): CvRecord => ({
+  id: record.id,
+  filename: record.filename,
+  createdAt: new Date(record.createdAt),
+  updatedAt: new Date(record.updatedAt),
+  blobUrl: record.blobUrl ?? null,
+  size,
+});
 
 const buildBlobRecord = (blob: BlobCvFile): CvRecord => ({
   id: blob.filename,
@@ -48,24 +66,6 @@ const statToRecord = async (filename: string) => {
   }
 };
 
-export const createOrUpdateCV = async (
-  filename: string,
-  blobMeta?: { url: string; size: number; uploadedAt?: Date }
-): Promise<CvRecord | null> => {
-  if (blobMeta) {
-    return {
-      id: filename,
-      filename,
-      createdAt: blobMeta.uploadedAt ?? new Date(),
-      updatedAt: blobMeta.uploadedAt ?? new Date(),
-      blobUrl: blobMeta.url,
-      size: blobMeta.size,
-    } satisfies CvRecord;
-  }
-
-  return statToRecord(filename || DEFAULT_CV_FILENAME);
-};
-
 const getLocalCv = async (): Promise<CvRecord | null> => {
   const primary = await statToRecord(DEFAULT_CV_FILENAME);
   if (primary) {
@@ -85,7 +85,76 @@ const getLocalCv = async (): Promise<CvRecord | null> => {
   return null;
 };
 
+const getDbCv = async (): Promise<CvRecord | null> => {
+  try {
+    const cached = await prisma.cV.findUnique({
+      where: { filename: DEFAULT_CV_FILENAME },
+      select: {
+        id: true,
+        filename: true,
+        createdAt: true,
+        updatedAt: true,
+        blobUrl: true,
+      },
+    });
+
+    if (cached) {
+      return normalizePrismaRecord(cached);
+    }
+
+    const fallback = await prisma.cV.findFirst({
+      orderBy: { updatedAt: "desc" },
+      select: {
+        id: true,
+        filename: true,
+        createdAt: true,
+        updatedAt: true,
+        blobUrl: true,
+      },
+    });
+
+    if (fallback) {
+      return normalizePrismaRecord(fallback);
+    }
+  } catch (error) {
+    console.error("Prisma CV lookup failed:", error);
+  }
+
+  return null;
+};
+
+export const createOrUpdateCV = async (
+  filename: string,
+  blobMeta?: { url: string; size?: number; uploadedAt?: Date }
+): Promise<CvRecord | null> => {
+  const targetFilename = filename || DEFAULT_CV_FILENAME;
+
+  try {
+    const record = await prisma.cV.upsert({
+      where: { filename: targetFilename },
+      update: {
+        filename: targetFilename,
+        blobUrl: blobMeta?.url ?? null,
+      },
+      create: {
+        filename: targetFilename,
+        blobUrl: blobMeta?.url ?? null,
+      },
+    });
+
+    return normalizePrismaRecord(record, blobMeta?.size);
+  } catch (error) {
+    console.error("Failed to persist CV metadata:", error);
+    return null;
+  }
+};
+
 export const getCV = async (): Promise<CvRecord | null> => {
+  const dbCv = await getDbCv();
+  if (dbCv) {
+    return dbCv;
+  }
+
   try {
     const blobCv = await getLatestBlobCv();
     if (blobCv) {
