@@ -80,7 +80,7 @@ export const cvController = new Elysia({ prefix: "/cv" })
   .get("/file", async ({ set, request }) => {
     const origin = request.headers.get("origin");
     const allowedOrigin = origin ?? "*";
-    const varyHeader = origin ? { Vary: "Origin" } : {};
+    const varyHeader: Record<string, string> = origin ? { Vary: "Origin" } : {};
 
     const cv = await getCV();
 
