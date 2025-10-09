@@ -151,17 +151,28 @@ export const createOrUpdateCV = async (
 
 export const getCV = async (): Promise<CvRecord | null> => {
   const dbCv = await getDbCv();
-  if (dbCv) {
+  if (dbCv?.blobUrl) {
     return dbCv;
   }
 
   try {
     const blobCv = await getLatestBlobCv();
     if (blobCv) {
+      if (!dbCv || !dbCv.blobUrl) {
+        await createOrUpdateCV(blobCv.filename, {
+          url: blobCv.url,
+          size: blobCv.size,
+          uploadedAt: blobCv.uploadedAt,
+        });
+      }
       return buildBlobRecord(blobCv);
     }
   } catch (error) {
     console.error("Failed to resolve blob CV record:", error);
+  }
+
+  if (dbCv) {
+    return dbCv;
   }
 
   return getLocalCv();

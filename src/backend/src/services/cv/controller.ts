@@ -57,7 +57,15 @@ export const cvController = new Elysia({ prefix: "/cv" })
         };
       }
 
-      const downloadUrl = cv.blobUrl ?? PUBLIC_DOWNLOAD_PATH;
+      const downloadUrl = cv.blobUrl ?? (allowFilesystemFallback ? PUBLIC_DOWNLOAD_PATH : null);
+
+      if (!downloadUrl) {
+        set.status = 404;
+        return {
+          status: 404,
+          message: "CV is not available for download. Please upload a new CV.",
+        };
+      }
 
       return {
         status: 200,
