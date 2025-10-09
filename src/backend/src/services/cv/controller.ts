@@ -200,8 +200,8 @@ export const cvController = new Elysia({ prefix: "/cv" })
           const blob = await uploadCvToBlob(CV_FILENAME, fileBuffer);
           blobMeta = {
             url: blob.url,
-            size: blob.size,
-            uploadedAt: blob.uploadedAt ? new Date(blob.uploadedAt) : undefined,
+            size: fileBuffer.byteLength,
+            uploadedAt: new Date(),
           };
         } catch (error) {
           console.error("Failed to upload CV to blob storage:", error);
