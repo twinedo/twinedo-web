@@ -1,8 +1,8 @@
-import { readdir, stat } from "node:fs/promises";
+import { readdir, stat, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { prisma } from "../../../prisma/client";
 import { resolveCVUploadDir } from "../../utils/paths";
-import { getLatestBlobCv, type BlobCvFile } from "./blobService";
+import { getLatestBlobCv, uploadCvToBlob, type BlobCvFile } from "./blobService";
 
 const DEFAULT_CV_FILENAME = "Twin Edo Nugraha - CV.pdf";
 
@@ -175,5 +175,44 @@ export const getCV = async (): Promise<CvRecord | null> => {
     return dbCv;
   }
 
+  const migrated = await ensureBlobFromLocal();
+  if (migrated) {
+    return migrated;
+  }
+
   return getLocalCv();
+};
+
+const ensureBlobFromLocal = async (): Promise<CvRecord | null> => {
+  const hasBlobCredentials = Boolean(process.env.BLOB_READ_WRITE_TOKEN);
+  if (!hasBlobCredentials) {
+    return null;
+  }
+
+  const localCv = await getLocalCv();
+  if (!localCv) {
+    return null;
+  }
+
+  try {
+    const filePath = getFilePath(localCv.filename);
+    const fileBytes = await readFile(filePath);
+    const blob = await uploadCvToBlob(localCv.filename, Buffer.from(fileBytes));
+
+    await createOrUpdateCV(localCv.filename, {
+      url: blob.url,
+      size: fileBytes.byteLength,
+      uploadedAt: new Date(),
+    });
+
+    return buildBlobRecord({
+      filename: localCv.filename,
+      url: blob.url,
+      uploadedAt: new Date(),
+      size: fileBytes.byteLength,
+    });
+  } catch (error) {
+    console.error("Failed to migrate local CV to blob storage:", error);
+    return localCv;
+  }
 };
