@@ -123,6 +123,47 @@ const getDbCv = async (): Promise<CvRecord | null> => {
   return null;
 };
 
+const isMissingBlobColumnError = (error: unknown) => {
+  if (!error || typeof error !== "object") return false;
+
+  const code = (error as { code?: string }).code;
+  const message = (error as { message?: string }).message ?? "";
+
+  return (
+    code === "P2010" ||
+    code === "P2021" ||
+    /column\s+"?bloburl"?\s+does\s+not\s+exist/i.test(message)
+  );
+};
+
+const upsertWithoutBlobColumn = async (filename: string) => {
+  const results = await prisma.$queryRaw<
+    Array<{ id: string; filename: string; createdAt: Date; updatedAt: Date }>
+  >`
+    INSERT INTO "CV" ("filename")
+    VALUES (${filename})
+    ON CONFLICT ("filename")
+    DO UPDATE SET "filename" = EXCLUDED."filename", "updatedAt" = NOW()
+    RETURNING "id", "filename", "createdAt", "updatedAt"
+  `;
+
+  if (!results || results.length === 0) {
+    throw new Error('Failed to upsert CV record without blob column.');
+  }
+
+  const record = results[0];
+
+  const fallbackRecord: CvRecord = {
+    id: record.id,
+    filename: record.filename,
+    createdAt: new Date(record.createdAt),
+    updatedAt: new Date(record.updatedAt),
+    blobUrl: null,
+  };
+
+  return fallbackRecord;
+};
+
 export const createOrUpdateCV = async (
   filename: string,
   blobMeta?: { url: string; size?: number; uploadedAt?: Date }
@@ -144,6 +185,23 @@ export const createOrUpdateCV = async (
 
     return normalizePrismaRecord(record, blobMeta?.size);
   } catch (error) {
+    if (isMissingBlobColumnError(error)) {
+      console.warn(
+        '⚠️  CV table missing "blobUrl" column. Falling back to metadata-only update. ' +
+        'Run the CV blob migration to finish the upgrade.'
+      );
+      try {
+        const result = await upsertWithoutBlobColumn(targetFilename);
+        return {
+          ...result,
+          blobUrl: blobMeta?.url ?? null,
+          size: blobMeta?.size,
+        };
+      } catch (fallbackError) {
+        console.error("Fallback CV upsert failed:", fallbackError);
+        return null;
+      }
+    }
     console.error("Failed to persist CV metadata:", error);
     return null;
   }

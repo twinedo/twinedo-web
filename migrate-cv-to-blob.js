@@ -1,20 +1,74 @@
 // migrate-cv-to-blob.js
+import 'dotenv/config';
 import { put } from '@vercel/blob';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
-import { prisma } from './src/backend/prisma/client/index.js';
+import { PrismaClient } from '@prisma/client';
 
 const CV_UPLOAD_DIR = 'src/backend/src/uploads/cv';
 const DRY_RUN = false; // Set to true to see what would happen without actually uploading
 
+function createPrismaClient() {
+  const candidates = [
+    { name: 'DIRECT_DATABASE_URL', value: process.env.DIRECT_DATABASE_URL },
+    { name: 'DATABASE_DIRECT_URL', value: process.env.DATABASE_DIRECT_URL },
+    { name: 'DATABASE_URL', value: process.env.DATABASE_URL },
+  ];
+
+  const selected = candidates.find((candidate) => typeof candidate.value === 'string' && candidate.value.trim().length > 0);
+  const databaseUrl = selected?.value?.trim();
+
+  if (!databaseUrl) {
+    console.error('❌ Missing database connection string. Set DIRECT_DATABASE_URL (preferred) or DATABASE_URL.');
+    process.exit(1);
+  }
+
+  console.log(`🔌 Using database URL from ${selected?.name}.`);
+
+  if (databaseUrl.startsWith('prisma://')) {
+    console.error('❌ This migration needs a direct Postgres connection (owner privileges).');
+    console.error('   Set DIRECT_DATABASE_URL to your direct database URL and rerun the script.');
+    process.exit(1);
+  }
+
+  return new PrismaClient({
+    datasources: { db: { url: databaseUrl } },
+  });
+}
+
+async function ensureBlobUrlColumn(prisma) {
+  const columns = await prisma.$queryRaw`
+    SELECT column_name
+    FROM information_schema.columns
+    WHERE table_name = 'CV' AND column_name = 'blobUrl'
+  `;
+
+  if (!Array.isArray(columns) || columns.length === 0) {
+    console.log('ℹ️  Adding missing "blobUrl" column to "CV" table...');
+    try {
+      await prisma.$executeRaw`ALTER TABLE "CV" ADD COLUMN "blobUrl" TEXT`;
+    } catch (error) {
+      if (error?.meta?.code === '42501' || /42501/.test(error?.message ?? '')) {
+        console.error('❌ Database user does not own table "CV". Connect with the owning role (e.g. direct service/owner credentials) and rerun.');
+        throw error;
+      }
+      throw error;
+    }
+    console.log('✅ Column added.');
+  }
+}
+
 async function migrateCVToBlob() {
+  const prisma = createPrismaClient();
   console.log('🚀 Starting CV migration to Vercel Blob...');
   console.log(`📂 Source directory: ${CV_UPLOAD_DIR}`);
   console.log(`🔄 Dry run mode: ${DRY_RUN}`);
   console.log('');
 
   try {
+    await ensureBlobUrlColumn(prisma);
+
     // Check if CV directory exists
     if (!existsSync(CV_UPLOAD_DIR)) {
       console.error(`❌ CV directory not found: ${CV_UPLOAD_DIR}`);
