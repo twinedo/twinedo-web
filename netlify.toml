@@ -1,0 +1,13 @@
+[build]
+  command = "npm run build"
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+[functions]
+  node_bundler = "esbuild"
+  external_node_modules = ["bcryptjs"]
+  included_files = [
+    "node_modules/.prisma/client/**",
+    "src/backend/prisma/schema.prisma",
+    "src/backend/prisma/client/**",
+    "src/backend/src/services/cv/uploads/**"
+  ]
