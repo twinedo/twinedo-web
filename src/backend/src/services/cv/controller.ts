@@ -182,7 +182,7 @@ export const cvController = new Elysia({ prefix: "/cv" })
 
     set.headers = headers;
     const redirectUrl = new URL(PUBLIC_DOWNLOAD_PATH, request.url);
-    return Response.redirect(redirectUrl, 302);
+    return Response.redirect(redirectUrl.toString(), 302);
   })
   .use(jwt(jwtProps))
   .post(

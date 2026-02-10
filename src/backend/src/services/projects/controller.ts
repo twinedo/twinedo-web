@@ -12,9 +12,8 @@ import { prisma } from "../../../prisma/client";
 import { adminMiddleware } from "../auth/adminMiddleware";
 import jwt from "@elysiajs/jwt";
 import { jwtProps } from "../../utils/const";
-import getConfig from "next/config";
 
-const { PROJECTS_UPLOAD_DIR } = getConfig().serverRuntimeConfig;
+const PROJECTS_UPLOAD_DIR = process.env.PROJECTS_UPLOAD_DIR;
 
 const baseProjectController = new Elysia({ prefix: "/project" });
 
@@ -32,137 +31,137 @@ export const projectController = baseProjectController
   .post(
     "/",
     async ({ body, set }) => {
-          try {
-            await ensureBucketExists(body.bucket);
+      try {
+        await ensureBucketExists(body.bucket);
 
-            const data = await createProject(body);
+        const data = await createProject(body);
 
-            await prisma.projectImage.updateMany({
-              where: { bucket: data.bucket },
-              data: { bucket: data.bucket }, // Or add projectId if schema changed
-            });
+        await prisma.projectImage.updateMany({
+          where: { bucket: data.bucket },
+          data: { bucket: data.bucket }, // Or add projectId if schema changed
+        });
 
-            set.status = 201;
-            return {
-              status: 201,
-              message: "Project created successfully",
-              data: {
-                ...data,
-                description: JSON.parse(data.description),
-              },
-            };
-          } catch (error) {
-            set.status = 500;
-            return {
-              status: 500,
-              message: "Failed to create project",
-              error: error instanceof Error ? error.message : String(error),
-            };
-          }
-        },
-        {
-          beforeHandle: adminMiddleware(),
-          body: t.Object({
-            year: t.String(),
-            platform: t.Union([t.Literal("mobile"), t.Literal("website")]),
-            tag: t.String(),
-            project_name: t.String(),
-            description: t.Union([t.String(), t.Array(t.String())]),
-            link_appstore: t.Optional(t.Union([t.String(), t.Null()])),
-            link_playstore: t.Optional(t.Union([t.String(), t.Null()])),
-            link_website: t.Optional(t.Union([t.String(), t.Null()])),
-            display: t.String(),
-            bucket: t.String(),
-          }),
+        set.status = 201;
+        return {
+          status: 201,
+          message: "Project created successfully",
+          data: {
+            ...data,
+            description: JSON.parse(data.description),
+          },
+        };
+      } catch (error) {
+        set.status = 500;
+        return {
+          status: 500,
+          message: "Failed to create project",
+          error: error instanceof Error ? error.message : String(error),
+        };
+      }
+    },
+    {
+      beforeHandle: adminMiddleware(),
+      body: t.Object({
+        year: t.String(),
+        platform: t.Union([t.Literal("mobile"), t.Literal("website")]),
+        tag: t.String(),
+        project_name: t.String(),
+        description: t.Union([t.String(), t.Array(t.String())]),
+        link_appstore: t.Optional(t.Union([t.String(), t.Null()])),
+        link_playstore: t.Optional(t.Union([t.String(), t.Null()])),
+        link_website: t.Optional(t.Union([t.String(), t.Null()])),
+        display: t.String(),
+        bucket: t.String(),
+      }),
+    }
+  )
+  .patch(
+    "/:id",
+    async ({ params: { id }, body, set }) => {
+      try {
+        const data = await updateProject(id, body);
+
+        set.status = 200;
+        return {
+          status: 200,
+          message: "Project updated successfully",
+          data: {
+            ...data,
+            description: JSON.parse(data.description),
+          },
+        };
+      } catch (error) {
+        set.status = 500;
+        return {
+          status: 500,
+          message: "Failed to update project",
+          error: error instanceof Error ? error.message : String(error),
+        };
+      }
+    },
+    {
+      beforeHandle: adminMiddleware(),
+      params: t.Object({
+        id: t.String(),
+      }),
+      body: t.Object({
+        year: t.Optional(t.String()),
+        platform: t.Optional(
+          t.Union([t.Literal("mobile"), t.Literal("website")])
+        ),
+        tag: t.Optional(t.String()),
+        project_name: t.Optional(t.String()),
+        description: t.Optional(t.Union([t.String(), t.Array(t.String())])),
+        link_appstore: t.Optional(t.Union([t.String(), t.Null()])),
+        link_playstore: t.Optional(t.Union([t.String(), t.Null()])),
+        link_website: t.Optional(t.Union([t.String(), t.Null()])),
+        display: t.Optional(t.String()),
+        bucket: t.Optional(t.String()),
+      }),
+    }
+  )
+  // Delete project
+  .delete(
+    "/:id",
+    async ({ params: { id }, set }) => {
+      try {
+        const project = await getProject(id);
+        if (!project) {
+          set.status = 404;
+          return {
+            status: 404,
+            message: "Project not found",
+          };
         }
-      )
-      .patch(
-        "/:id",
-        async ({ params: { id }, body, set }) => {
-          try {
-            const data = await updateProject(id, body);
 
-            set.status = 200;
-            return {
-              status: 200,
-              message: "Project updated successfully",
-              data: {
-                ...data,
-                description: JSON.parse(data.description),
-              },
-            };
-          } catch (error) {
-            set.status = 500;
-            return {
-              status: 500,
-              message: "Failed to update project",
-              error: error instanceof Error ? error.message : String(error),
-            };
-          }
-        },
-        {
-          beforeHandle: adminMiddleware(),
-          params: t.Object({
-            id: t.String(),
-          }),
-          body: t.Object({
-            year: t.Optional(t.String()),
-            platform: t.Optional(
-              t.Union([t.Literal("mobile"), t.Literal("website")])
-            ),
-            tag: t.Optional(t.String()),
-            project_name: t.Optional(t.String()),
-            description: t.Optional(t.Union([t.String(), t.Array(t.String())])),
-            link_appstore: t.Optional(t.Union([t.String(), t.Null()])),
-            link_playstore: t.Optional(t.Union([t.String(), t.Null()])),
-            link_website: t.Optional(t.Union([t.String(), t.Null()])),
-            display: t.Optional(t.String()),
-            bucket: t.Optional(t.String()),
-          }),
-        }
-      )
-      // Delete project
-      .delete(
-        "/:id",
-        async ({ params: { id }, set }) => {
-          try {
-            const project = await getProject(id);
-            if (!project) {
-              set.status = 404;
-              return {
-                status: 404,
-                message: "Project not found",
-              };
-            }
+        // Delete associated files
+        await deleteProjectFiles(project.bucket, [project.display]);
 
-            // Delete associated files
-            await deleteProjectFiles(project.bucket, [project.display]);
+        const data = await deleteProject(id);
 
-            const data = await deleteProject(id);
+        set.status = 200;
+        return {
+          status: 200,
+          message: "Project deleted successfully",
+          data,
+        };
+      } catch (error) {
+        set.status = 500;
+        return {
+          status: 500,
+          message: "Failed to delete project",
+          error: error instanceof Error ? error.message : String(error),
+        };
+      }
+    },
+    {
+      beforeHandle: adminMiddleware(),
+      params: t.Object({
+        id: t.String(),
+      }),
+    }
+  )
 
-            set.status = 200;
-            return {
-              status: 200,
-              message: "Project deleted successfully",
-              data,
-            };
-          } catch (error) {
-            set.status = 500;
-            return {
-              status: 500,
-              message: "Failed to delete project",
-              error: error instanceof Error ? error.message : String(error),
-            };
-          }
-        },
-        {
-          beforeHandle: adminMiddleware(),
-          params: t.Object({
-            id: t.String(),
-          }),
-        }
-      )
-  
   // Get all projects (with optional platform filter)
   .get(
     "/",

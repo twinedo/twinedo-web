@@ -1,8 +1,7 @@
 import { mkdir, unlink } from 'node:fs/promises';
 import { join } from 'node:path';
-import getConfig from 'next/config';
 
-const { PROJECTS_UPLOAD_DIR } = getConfig().serverRuntimeConfig;
+const PROJECTS_UPLOAD_DIR = process.env.PROJECTS_UPLOAD_DIR || join(process.cwd(), 'public', 'projects');
 
 export const ensureBucketExists = async (bucket: string) => {
   const bucketDir = join(PROJECTS_UPLOAD_DIR, bucket);
@@ -19,8 +18,8 @@ export const parseDescription = (desc: string | string[] | undefined | null): st
 export const deleteProjectFiles = async (bucket: string, filenames: string[]) => {
   const bucketDir = join(PROJECTS_UPLOAD_DIR, bucket);
   await Promise.all(
-    filenames.map(file => 
-      unlink(join(bucketDir, file)).catch(() => {})
+    filenames.map(file =>
+      unlink(join(bucketDir, file)).catch(() => { })
     )
   );
 };

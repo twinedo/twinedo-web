@@ -20,6 +20,10 @@ export const getLatestBlobCv = async (): Promise<BlobCvFile | null> => {
       (a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime()
     )[0];
 
+    if (!latest) {
+      return null;
+    }
+
     const filename = latest.pathname.startsWith(CV_PREFIX)
       ? latest.pathname.slice(CV_PREFIX.length)
       : latest.pathname;
@@ -40,6 +44,6 @@ export const uploadCvToBlob = async (filename: string, fileBuffer: Buffer) => {
   const pathname = `${CV_PREFIX}${filename}`;
   return put(pathname, fileBuffer, {
     access: "public",
-    addRandomSuffix: false,
+    addRandomSuffix: true,
   });
 };

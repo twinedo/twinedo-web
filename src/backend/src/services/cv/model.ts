@@ -153,6 +153,10 @@ const upsertWithoutBlobColumn = async (filename: string) => {
 
   const record = results[0];
 
+  if (!record) {
+    throw new Error('Failed to upsert CV record without blob column (result missing).');
+  }
+
   const fallbackRecord: CvRecord = {
     id: record.id,
     filename: record.filename,
