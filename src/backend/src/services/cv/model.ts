@@ -180,6 +180,7 @@ export const createOrUpdateCV = async (
       update: {
         filename: targetFilename,
         blobUrl: blobMeta?.url ?? null,
+        updatedAt: new Date(),
       },
       create: {
         filename: targetFilename,
