@@ -3,7 +3,7 @@ import type { User } from "./types";
 
 type AdminContext = {
   jwt?: {
-    verify: (token: string) => Promise<JWTPayloadSpec>;
+    verify: (token: string) => Promise<JWTPayloadSpec | false>;
     sign: (payload: User) => Promise<string>;
   };
   set: {
@@ -85,7 +85,7 @@ export const adminMiddleware = () => {
 // Helper function to ensure admin user exists
 export const ensureAdminExists = async () => {
   const { prisma } = await import('../../../prisma/client');
-  
+
   try {
     // Check if admin user exists
     const existingAdmin = await prisma.user.findUnique({
