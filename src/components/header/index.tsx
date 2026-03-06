@@ -3,7 +3,12 @@ import { useMemo } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { CodeBracketIcon, DocumentIcon, RectangleStackIcon } from "@heroicons/react/24/outline";
+import {
+  AcademicCapIcon,
+  CodeBracketIcon,
+  DocumentIcon,
+  RectangleStackIcon,
+} from "@heroicons/react/24/outline";
 
 export const Header = () => {
   const pathname = usePathname();
@@ -13,6 +18,7 @@ export const Header = () => {
     () => [
       { to: "/", label: "Home", icon: <CodeBracketIcon className="w-4 h-4" /> },
       { to: "/projects", label: "Projects", icon: <RectangleStackIcon className="w-4 h-4" /> },
+      { to: "/tutorials", label: "Tutorials", icon: <AcademicCapIcon className="w-4 h-4" /> },
       { to: "/cv", label: "CV", icon: <DocumentIcon className="w-4 h-4" /> },
     ],
     []
