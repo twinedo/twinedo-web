@@ -81,7 +81,7 @@ export function Footer() {
             </div>
             
             <p className="text-sm text-gray-500">
-              Copyright © 2025 twinedo.dev - All Rights Reserved
+              Copyright © 2026 twinedo.dev - All Rights Reserved
             </p>
           </div>
         </div>
