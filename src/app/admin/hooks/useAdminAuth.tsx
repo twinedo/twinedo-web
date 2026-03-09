@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, startTransition, useContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 interface User {
@@ -27,6 +27,13 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
 
   const isAdmin = user?.email === 'twinedo.dev@gmail.com' && user?.role === 'superadmin';
 
+  function logout() {
+    setUser(null);
+    setToken(null);
+    localStorage.removeItem('admin_token');
+    localStorage.removeItem('admin_user');
+  }
+
   // Load auth state from localStorage
   useEffect(() => {
     const verifyToken = async (token: string) => {
@@ -51,12 +58,19 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
     const savedUser = localStorage.getItem('admin_user');
 
     if (savedToken && savedUser) {
-      setToken(savedToken);
-      setUser(JSON.parse(savedUser));
+      startTransition(() => {
+        setToken(savedToken);
+        setUser(JSON.parse(savedUser));
+        setLoading(false);
+      });
       // Verify token is still valid
       verifyToken(savedToken);
+      return;
     }
-    setLoading(false);
+
+    startTransition(() => {
+      setLoading(false);
+    });
   }, []);
 
   const login = async (email: string, password: string) => {
@@ -86,13 +100,6 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
     // Save to localStorage
     localStorage.setItem('admin_token', data.data.token);
     localStorage.setItem('admin_user', JSON.stringify(data.data.user));
-  };
-
-  const logout = () => {
-    setUser(null);
-    setToken(null);
-    localStorage.removeItem('admin_token');
-    localStorage.removeItem('admin_user');
   };
 
   return (
