@@ -8,15 +8,17 @@ import ReactQueryTutorialContent, {
 } from "./react-query";
 import RustTutorialContent from "./rust";
 import { tutorialMeta as rust } from "./rust/meta";
-import RustSeries2TutorialContent, {
-} from "./rust-series-2";
+import RustSeries2TutorialContent from "./rust-series-2";
 import { tutorialMeta as rustSeries2 } from "./rust-series-2-meta";
+import RustSeries3TutorialContent from "./rust-series-3";
+import { tutorialMeta as rustSeries3 } from "./rust-series-3-meta";
 import type { TutorialMeta, TutorialModule } from "./types";
 
 export const tutorialModules: TutorialModule[] = [
   { meta: bun, Content: BunTutorialContent },
   { meta: rust, Content: RustTutorialContent },
   { meta: rustSeries2, Content: RustSeries2TutorialContent },
+  { meta: rustSeries3, Content: RustSeries3TutorialContent },
   { meta: reactQuery, Content: ReactQueryTutorialContent },
   { meta: nextPerformance, Content: NextPerformanceTutorialContent },
   { meta: ciCd, Content: CiCdTutorialContent },
