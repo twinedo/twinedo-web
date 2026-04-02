@@ -30,7 +30,6 @@ interface ProjectFormData {
   link_appstore: string;
   link_playstore: string;
   link_website: string;
-  display: string;
   bucket: string;
 }
 
@@ -50,7 +49,6 @@ export default function ProjectsManagement() {
     link_appstore: '',
     link_playstore: '',
     link_website: '',
-    display: 'active',
     bucket: ''
   });
 
@@ -124,7 +122,6 @@ export default function ProjectsManagement() {
       link_appstore: project.link_appstore || '',
       link_playstore: project.link_playstore || '',
       link_website: project.link_website || '',
-      display: project.display,
       bucket: project.bucket
     });
     setShowForm(true);
@@ -164,7 +161,6 @@ export default function ProjectsManagement() {
       link_appstore: '',
       link_playstore: '',
       link_website: '',
-      display: 'active',
       bucket: ''
     });
     setEditingProject(null);
@@ -265,19 +261,6 @@ export default function ProjectsManagement() {
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Display Status
-                    </label>
-                    <select
-                      value={formData.display}
-                      onChange={(e) => setFormData({...formData, display: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="active">Active</option>
-                      <option value="inactive">Inactive</option>
-                    </select>
-                  </div>
                 </div>
 
                 <div>
@@ -372,7 +355,7 @@ export default function ProjectsManagement() {
                       Year
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
+                      Bucket
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Actions
@@ -403,12 +386,8 @@ export default function ProjectsManagement() {
                         {project.year}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                          project.display === 'active' 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-red-100 text-red-800'
-                        }`}>
-                          {project.display}
+                        <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
+                          {project.bucket}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">

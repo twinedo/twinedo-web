@@ -15,6 +15,14 @@ import { getCV as fetchCVRecord } from "./src/services/cv/model";
 import { join } from "node:path";
 import { readFile } from "node:fs/promises";
 import { resolveCVUploadDir } from "./src/utils/paths";
+import {
+  createImageCandidate,
+  createLegacyDisplayCandidate,
+  dedupeImageCandidates,
+  getProjectImageProxyUrl,
+  serveLocalProjectImage,
+  serveRemoteImage,
+} from "./src/services/projectImages/utils";
 
 const app = new Elysia({ prefix: "/api" })
   .get('/health', () => ({ ok: true }))
@@ -190,11 +198,15 @@ const app = new Elysia({ prefix: "/api" })
           blobUrl: true 
         }
       });
+
       set.status = 200;
       return {
         status: 200,
         message: "Get project images successfully - bypass route",
-        data: images,
+        data: images.map((image) => ({
+          ...image,
+          blobUrl: getProjectImageProxyUrl(image.bucket, image.filename),
+        })),
         version: "cache-bypass-v1"
       };
     } catch (error) {
@@ -202,6 +214,97 @@ const app = new Elysia({ prefix: "/api" })
       return {
         status: 500,
         message: "Failed to get project images",
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  })
+  .get("/images/file/:bucket/:filename", async ({ params: { bucket, filename }, set }) => {
+    try {
+      const image = await prisma.projectImage.findFirst({
+        where: { bucket, filename },
+        select: {
+          bucket: true,
+          filename: true,
+          blobUrl: true,
+        },
+      });
+
+      const remoteResponse = await serveRemoteImage(image?.blobUrl);
+      if (remoteResponse) {
+        return remoteResponse;
+      }
+
+      const localResponse = await serveLocalProjectImage(bucket, image?.filename ?? filename);
+      if (localResponse) {
+        return localResponse;
+      }
+
+      set.status = 404;
+      return {
+        status: 404,
+        message: "Project image not found",
+      };
+    } catch (error) {
+      set.status = 500;
+      return {
+        status: 500,
+        message: "Failed to get project image",
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  })
+  .get("/images/thumbnail/:bucket", async ({ params: { bucket }, set }) => {
+    try {
+      const [images, project] = await Promise.all([
+        prisma.projectImage.findMany({
+          where: { bucket },
+          orderBy: [
+            { isThumbnail: "desc" },
+            { isFeatured: "desc" },
+            { order: "asc" },
+            { createdAt: "asc" },
+          ],
+          select: {
+            bucket: true,
+            filename: true,
+            blobUrl: true,
+          },
+        }),
+        prisma.project.findFirst({
+          where: { bucket },
+          select: {
+            display: true,
+          },
+        }),
+      ]);
+
+      const candidates = dedupeImageCandidates([
+        ...images.map((image) => createImageCandidate(bucket, image)),
+        createLegacyDisplayCandidate(bucket, project?.display),
+      ]);
+
+      for (const candidate of candidates) {
+        const remoteResponse = await serveRemoteImage(candidate.remoteUrl);
+        if (remoteResponse) {
+          return remoteResponse;
+        }
+
+        const localResponse = await serveLocalProjectImage(candidate.bucket, candidate.filename);
+        if (localResponse) {
+          return localResponse;
+        }
+      }
+
+      set.status = 404;
+      return {
+        status: 404,
+        message: "Project thumbnail not found",
+      };
+    } catch (error) {
+      set.status = 500;
+      return {
+        status: 500,
+        message: "Failed to get project thumbnail",
         error: error instanceof Error ? error.message : String(error),
       };
     }

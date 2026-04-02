@@ -1,4 +1,5 @@
 import { prisma } from "../../../prisma/client";
+import { getProjectThumbnailProxyUrl } from "../projectImages/utils";
 import type { Platform, ProjectInput, ProjectUpdateInput } from "./types";
 import { parseDescription } from "./utils";
 
@@ -6,6 +7,7 @@ export const createProject = async (data: ProjectInput) => {
   return await prisma.project.create({
     data: {
       ...data,
+      display: data.display?.trim() ?? "",
       description: JSON.stringify(parseDescription(data.description)),
     },
   });
@@ -41,6 +43,7 @@ export const getProjects = async (filter?: { platform?: Platform }) => {
         link_appstore: proj.link_appstore || "", // Fallback to empty string
         link_playstore: proj.link_playstore || "",
         link_website: proj.link_website || "",
+        display: getProjectThumbnailProxyUrl(proj.bucket),
       };
     }
   );

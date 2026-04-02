@@ -70,7 +70,7 @@ export const projectController = baseProjectController
         link_appstore: t.Optional(t.Union([t.String(), t.Null()])),
         link_playstore: t.Optional(t.Union([t.String(), t.Null()])),
         link_website: t.Optional(t.Union([t.String(), t.Null()])),
-        display: t.String(),
+        display: t.Optional(t.String()),
         bucket: t.String(),
       }),
     }

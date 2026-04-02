@@ -9,7 +9,7 @@ export type ProjectInput = {
   link_appstore?: string | null;
   link_playstore?: string | null;
   link_website?: string | null;
-  display: string;
+  display?: string;
   bucket: string;
 }
 
