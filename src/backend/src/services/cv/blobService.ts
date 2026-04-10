@@ -1,4 +1,4 @@
-import { list, put } from "@vercel/blob";
+import { del, list, put } from "@vercel/blob";
 
 export interface BlobCvFile {
   filename: string;
@@ -9,14 +9,27 @@ export interface BlobCvFile {
 
 const CV_PREFIX = "cv/";
 
+const listAllCvBlobs = async () => {
+  const blobs: Awaited<ReturnType<typeof list>>["blobs"] = [];
+  let cursor: string | undefined;
+
+  do {
+    const response = await list({ prefix: CV_PREFIX, limit: 1000, cursor });
+    blobs.push(...(response.blobs ?? []));
+    cursor = response.hasMore ? response.cursor : undefined;
+  } while (cursor);
+
+  return blobs;
+};
+
 export const getLatestBlobCv = async (): Promise<BlobCvFile | null> => {
   try {
-    const response = await list({ prefix: CV_PREFIX, limit: 20 });
-    if (!response.blobs?.length) {
+    const blobs = await listAllCvBlobs();
+    if (!blobs.length) {
       return null;
     }
 
-    const latest = [...response.blobs].sort(
+    const latest = [...blobs].sort(
       (a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime()
     )[0];
 
@@ -46,4 +59,15 @@ export const uploadCvToBlob = async (filename: string, fileBuffer: Buffer) => {
     access: "public",
     addRandomSuffix: true,
   });
+};
+
+export const deleteStaleCvBlobs = async (currentUrl: string) => {
+  const blobs = await listAllCvBlobs();
+  const staleUrls = blobs.filter((blob) => blob.url !== currentUrl).map((blob) => blob.url);
+
+  if (staleUrls.length === 0) {
+    return;
+  }
+
+  await del(staleUrls);
 };

@@ -6,7 +6,7 @@ import { adminMiddleware } from "../auth/adminMiddleware";
 import jwt from "@elysiajs/jwt";
 import { jwtProps } from "../../utils/const";
 import { resolveCVUploadDir } from "../../utils/paths";
-import { uploadCvToBlob } from "./blobService";
+import { deleteStaleCvBlobs, uploadCvToBlob } from "./blobService";
 
 const CV_UPLOAD_DIR = resolveCVUploadDir();
 const CV_FILENAME = "Twin Edo Nugraha - CV.pdf";
@@ -57,9 +57,9 @@ export const cvController = new Elysia({ prefix: "/cv" })
         };
       }
 
-      const downloadUrl = cv.blobUrl ?? (allowFilesystemFallback ? PUBLIC_DOWNLOAD_PATH : null);
+      const downloadUrl = PUBLIC_DOWNLOAD_PATH;
 
-      if (!downloadUrl) {
+      if (!cv.blobUrl && !allowFilesystemFallback) {
         set.status = 404;
         return {
           status: 404,
@@ -240,7 +240,15 @@ export const cvController = new Elysia({ prefix: "/cv" })
         throw new Error("CV metadata unavailable after upload.");
       }
 
-      const downloadUrl = blobMeta?.url ?? PUBLIC_DOWNLOAD_PATH;
+      if (blobMeta?.url) {
+        try {
+          await deleteStaleCvBlobs(blobMeta.url);
+        } catch (error) {
+          console.error("Failed to clean up stale CV blobs:", error);
+        }
+      }
+
+      const downloadUrl = PUBLIC_DOWNLOAD_PATH;
 
       return {
         status: 201,
