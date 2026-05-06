@@ -68,9 +68,8 @@ export const adminMiddleware = () => {
         };
       }
 
-      // Return success response instead of user data directly
       Object.assign(context, { adminUser: dataUser });
-      return context;
+      return;
     } catch (error) {
       set.status = 401;
       return {
