@@ -187,7 +187,7 @@ export const cvController = new Elysia({ prefix: "/cv" })
   .use(jwt(jwtProps))
   .post(
     "/upload",
-    async ({ body }) => {
+    async ({ body, set }) => {
       const file = Array.isArray(body.cv_file) ? body.cv_file[0] : body.cv_file;
 
       if (!file) {
@@ -235,10 +235,15 @@ export const cvController = new Elysia({ prefix: "/cv" })
       }
 
       const data = await createOrUpdateCV(CV_FILENAME, blobMeta);
-
-      if (!data) {
-        throw new Error("CV metadata unavailable after upload.");
-      }
+      const uploadedAt = blobMeta?.uploadedAt ?? new Date();
+      const cvData = data ?? {
+        id: CV_FILENAME,
+        filename: CV_FILENAME,
+        createdAt: uploadedAt,
+        updatedAt: uploadedAt,
+        blobUrl: blobMeta?.url ?? null,
+        size: blobMeta?.size ?? fileBuffer.byteLength,
+      };
 
       if (blobMeta?.url) {
         try {
@@ -250,14 +255,15 @@ export const cvController = new Elysia({ prefix: "/cv" })
 
       const downloadUrl = PUBLIC_DOWNLOAD_PATH;
 
+      set.status = 201;
       return {
         status: 201,
         message: "CV uploaded successfully",
         data: {
-          ...data,
+          ...cvData,
           url: downloadUrl,
           downloadUrl,
-          blobUrl: blobMeta?.url ?? null,
+          blobUrl: cvData.blobUrl ?? null,
           storage: blobMeta ? "blob" : "filesystem",
         },
       };

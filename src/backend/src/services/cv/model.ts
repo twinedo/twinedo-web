@@ -1,10 +1,12 @@
 import { readdir, stat, readFile } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
 import { join } from "node:path";
 import { prisma } from "../../../prisma/client";
 import { resolveCVUploadDir } from "../../utils/paths";
 import { getLatestBlobCv, uploadCvToBlob, type BlobCvFile } from "./blobService";
 
 const DEFAULT_CV_FILENAME = "Twin Edo Nugraha - CV.pdf";
+let cvBlobColumnAvailable = true;
 
 type PrismaCVRecord = {
   id: string;
@@ -13,6 +15,8 @@ type PrismaCVRecord = {
   updatedAt: Date;
   blobUrl: string | null;
 };
+
+type PrismaCVRecordWithoutBlob = Omit<PrismaCVRecord, "blobUrl">;
 
 export type CvRecord = {
   id: string;
@@ -25,16 +29,28 @@ export type CvRecord = {
 
 const normalizePrismaRecord = (record: PrismaCVRecord, size?: number): CvRecord => ({
   id: record.id,
-  filename: record.filename,
+  filename: DEFAULT_CV_FILENAME,
   createdAt: new Date(record.createdAt),
   updatedAt: new Date(record.updatedAt),
   blobUrl: record.blobUrl ?? null,
   size,
 });
 
+const normalizePrismaRecordWithoutBlob = (
+  record: PrismaCVRecordWithoutBlob,
+  size?: number
+): CvRecord => ({
+  id: record.id,
+  filename: DEFAULT_CV_FILENAME,
+  createdAt: new Date(record.createdAt),
+  updatedAt: new Date(record.updatedAt),
+  blobUrl: null,
+  size,
+});
+
 const buildBlobRecord = (blob: BlobCvFile): CvRecord => ({
-  id: blob.filename,
-  filename: blob.filename,
+  id: DEFAULT_CV_FILENAME,
+  filename: DEFAULT_CV_FILENAME,
   createdAt: blob.uploadedAt,
   updatedAt: blob.uploadedAt,
   blobUrl: blob.url,
@@ -86,6 +102,10 @@ const getLocalCv = async (): Promise<CvRecord | null> => {
 };
 
 const getDbCv = async (): Promise<CvRecord | null> => {
+  if (!cvBlobColumnAvailable) {
+    return getDbCvWithoutBlobColumn();
+  }
+
   try {
     const cached = await prisma.cV.findUnique({
       where: { filename: DEFAULT_CV_FILENAME },
@@ -117,7 +137,48 @@ const getDbCv = async (): Promise<CvRecord | null> => {
       return normalizePrismaRecord(fallback);
     }
   } catch (error) {
+    if (isMissingBlobColumnError(error)) {
+      cvBlobColumnAvailable = false;
+      return getDbCvWithoutBlobColumn();
+    }
+
     console.error("Prisma CV lookup failed:", error);
+  }
+
+  return null;
+};
+
+const getDbCvWithoutBlobColumn = async (): Promise<CvRecord | null> => {
+  try {
+    const cached = await prisma.cV.findUnique({
+      where: { filename: DEFAULT_CV_FILENAME },
+      select: {
+        id: true,
+        filename: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    if (cached) {
+      return normalizePrismaRecordWithoutBlob(cached);
+    }
+
+    const fallback = await prisma.cV.findFirst({
+      orderBy: { updatedAt: "desc" },
+      select: {
+        id: true,
+        filename: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    if (fallback) {
+      return normalizePrismaRecordWithoutBlob(fallback);
+    }
+  } catch (error) {
+    console.error("Prisma CV lookup without blob column failed:", error);
   }
 
   return null;
@@ -132,16 +193,19 @@ const isMissingBlobColumnError = (error: unknown) => {
   return (
     code === "P2010" ||
     code === "P2021" ||
-    /column\s+"?bloburl"?\s+does\s+not\s+exist/i.test(message)
+    code === "P2022" ||
+    /bloburl/i.test(message) ||
+    /blobUrl/.test(message)
   );
 };
 
 const upsertWithoutBlobColumn = async (filename: string) => {
+  const id = randomUUID();
   const results = await prisma.$queryRaw<
     Array<{ id: string; filename: string; createdAt: Date; updatedAt: Date }>
   >`
-    INSERT INTO "CV" ("filename")
-    VALUES (${filename})
+    INSERT INTO "CV" ("id", "filename", "createdAt", "updatedAt")
+    VALUES (${id}::uuid, ${filename}, NOW(), NOW())
     ON CONFLICT ("filename")
     DO UPDATE SET "filename" = EXCLUDED."filename", "updatedAt" = NOW()
     RETURNING "id", "filename", "createdAt", "updatedAt"
@@ -174,6 +238,15 @@ export const createOrUpdateCV = async (
 ): Promise<CvRecord | null> => {
   const targetFilename = filename || DEFAULT_CV_FILENAME;
 
+  if (!cvBlobColumnAvailable) {
+    const result = await upsertWithoutBlobColumn(targetFilename);
+    return {
+      ...result,
+      blobUrl: blobMeta?.url ?? null,
+      size: blobMeta?.size,
+    };
+  }
+
   try {
     const record = await prisma.cV.upsert({
       where: { filename: targetFilename },
@@ -191,10 +264,7 @@ export const createOrUpdateCV = async (
     return normalizePrismaRecord(record, blobMeta?.size);
   } catch (error) {
     if (isMissingBlobColumnError(error)) {
-      console.warn(
-        '⚠️  CV table missing "blobUrl" column. Falling back to metadata-only update. ' +
-        'Run the CV blob migration to finish the upgrade.'
-      );
+      cvBlobColumnAvailable = false;
       try {
         const result = await upsertWithoutBlobColumn(targetFilename);
         return {
@@ -222,7 +292,7 @@ export const getCV = async (): Promise<CvRecord | null> => {
     const blobCv = await getLatestBlobCv();
     if (blobCv) {
       if (!dbCv || !dbCv.blobUrl) {
-        await createOrUpdateCV(blobCv.filename, {
+        await createOrUpdateCV(DEFAULT_CV_FILENAME, {
           url: blobCv.url,
           size: blobCv.size,
           uploadedAt: blobCv.uploadedAt,

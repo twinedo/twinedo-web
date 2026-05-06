@@ -57,7 +57,8 @@ export const uploadCvToBlob = async (filename: string, fileBuffer: Buffer) => {
   const pathname = `${CV_PREFIX}${filename}`;
   return put(pathname, fileBuffer, {
     access: "public",
-    addRandomSuffix: true,
+    addRandomSuffix: false,
+    allowOverwrite: true,
   });
 };
 
