@@ -1,9 +1,16 @@
 import { mkdir, unlink } from 'node:fs/promises';
 import { join } from 'node:path';
+import { resolveProjectsUploadDir } from '../projectImages/utils';
 
-const PROJECTS_UPLOAD_DIR = process.env.PROJECTS_UPLOAD_DIR || join(process.cwd(), 'public', 'projects');
+const isVercelEnv = Boolean(process.env.VERCEL);
+const allowFilesystemFallback = !isVercelEnv || process.env.NODE_ENV !== 'production';
 
 export const ensureBucketExists = async (bucket: string) => {
+  if (!allowFilesystemFallback) {
+    return null;
+  }
+
+  const PROJECTS_UPLOAD_DIR = resolveProjectsUploadDir();
   const bucketDir = join(PROJECTS_UPLOAD_DIR, bucket);
   await mkdir(bucketDir, { recursive: true });
   return bucketDir;
@@ -16,6 +23,11 @@ export const parseDescription = (desc: string | string[] | undefined | null): st
 };
 
 export const deleteProjectFiles = async (bucket: string, filenames: string[]) => {
+  if (!allowFilesystemFallback) {
+    return;
+  }
+
+  const PROJECTS_UPLOAD_DIR = resolveProjectsUploadDir();
   const bucketDir = join(PROJECTS_UPLOAD_DIR, bucket);
   await Promise.all(
     filenames.map(file =>
