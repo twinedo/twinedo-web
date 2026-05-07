@@ -178,7 +178,7 @@ export function Stacks() {
             >
               {[
                 { label: "Technologies", value: `${arrImages.length}+` },
-                { label: "Years Experience", value: "5+" },
+                { label: "Years Experience", value: "6+" },
                 { label: "Projects", value: "20+" },
                 { label: "Happy Clients", value: "10+" }
               ].map((stat, index) => (
